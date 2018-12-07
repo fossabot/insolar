@@ -25,13 +25,13 @@ func New(name string, key string, requisites string) (*Organization, error) {
 
 ///////////////////impl/////////////////////
 func (o *Organization) GetName() (string, error) {
-	return o.Name, nil
+	return o.Participant.GetName()
 }
 
 var INSATTR_GetPublicKey_API = true
 
 func (o *Organization) GetPublicKey() (string, error) {
-	return o.PublicKey, nil
+	return o.Participant.GetPublicKey()
 }
 
 ///////////////////impl end//////////////////

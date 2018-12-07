@@ -44,13 +44,13 @@ func New(name string, key string) (*Member, error) {
 
 ///////////////////impl/////////////////////
 func (m *Member) GetName() (string, error) {
-	return m.Name, nil
+	return m.Participant.GetName()
 }
 
 var INSATTR_GetPublicKey_API = true
 
 func (m *Member) GetPublicKey() (string, error) {
-	return m.PublicKey, nil
+	return m.Participant.GetPublicKey()
 }
 
 ///////////////////impl end/////////////////
