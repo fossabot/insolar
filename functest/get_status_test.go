@@ -1,3 +1,5 @@
+// +build functest
+
 /*
  *    Copyright 2018 Insolar
  *
@@ -14,21 +16,16 @@
  *    limitations under the License.
  */
 
-package configuration
+package functest
 
-// Node holds configuration for one Node
-type Node struct {
-	ID string
-}
+import (
+	"testing"
 
-// NodeNetwork holds configuration for NodeNetwork
-type NodeNetwork struct {
-	Node *Node
-}
+	"github.com/stretchr/testify/require"
+)
 
-// NewNodeNetwork creates new default NodeNetwork configuration
-func NewNodeNetwork() NodeNetwork {
-	return NodeNetwork{
-		Node: &Node{ID: "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"},
-	}
+func TestGetStatus(t *testing.T) {
+	status := getStatus(t)
+	require.NotNil(t, status)
+	require.Equal(t, "NoNetworkState", status.NetworkState)
 }
