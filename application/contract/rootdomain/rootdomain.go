@@ -19,8 +19,8 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/insolar/insolar/application/proxy/member"
+	"github.com/insolar/insolar/application/proxy/organization"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -139,4 +139,47 @@ func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
 // NewRootDomain creates new RootDomain
 func NewRootDomain() (*RootDomain, error) {
 	return &RootDomain{}, nil
+}
+
+// CreateOrganization processes create organization request
+func (rd *RootDomain) CreateOrganization(name string, key string, requisites string) (string, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return "", fmt.Errorf("[ CreateOrganization ] Only Root member can create organization")
+	}
+	organizationHolder := organization.New(name, key, requisites)
+	o, err := organizationHolder.AsChild(rd.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ CreateOrganization ] Can't save as child: %s", err.Error())
+	}
+
+	return o.GetReference().String(), nil
+}
+
+// AddMemberToOrganization processes add member to organization
+func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr, organizationReferenceStr string) (string, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Only Root member can create organizations")
+	}
+
+	memberReference := core.NewRefFromBase58(memberReferenceStr)
+	organizationReference := core.NewRefFromBase58(organizationReferenceStr)
+
+	memberObject := member.GetObject(memberReference)
+
+	name, err := memberObject.GetName()
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get name : %s", err.Error())
+	}
+	key, err := memberObject.GetPublicKey()
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get name : %s", err.Error())
+	}
+
+	memberHolder := member.New(name, key)
+	m, err := memberHolder.AsChild(organizationReference)
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't save as child: %s", err.Error())
+	}
+
+	return m.GetReference().String(), nil
 }

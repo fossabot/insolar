@@ -1,23 +1,24 @@
 /*
- *    Copyright 2018 Insolar
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+*    Copyright 2018 Insolar
+*
+*    Licensed under the Apache License, Version 2.0 (the "License");
+*    you may not use this file except in compliance with the License.
+*    You may obtain a copy of the License at
+*
+*        http://www.apache.org/licenses/LICENSE-2.0
+*
+*    Unless required by applicable law or agreed to in writing, software
+*    distributed under the License is distributed on an "AS IS" BASIS,
+*    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*    See the License for the specific language governing permissions and
+*    limitations under the License.
  */
 
 package member
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/application/contract_interface/participant"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -29,10 +30,19 @@ import (
 
 type Member struct {
 	foundation.BaseContract
-	Name      string
-	PublicKey string
+	participant.Participant
 }
 
+func New(name string, key string) (*Member, error) {
+	return &Member{
+		foundation.BaseContract{},
+		participant.Participant{
+			Name:      name,
+			PublicKey: key,
+		}}, nil
+}
+
+///////////////////impl/////////////////////
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
 }
@@ -43,14 +53,11 @@ func (m *Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
 
-func New(name string, key string) (*Member, error) {
-	return &Member{
-		Name:      name,
-		PublicKey: key,
-	}, nil
-}
+///////////////////impl end/////////////////
 
-func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
+var INSATTR_Call_API = true
+
+func (m *Member) VerifySig(method string, params []byte, seed []byte, sign []byte) error {
 	args, err := core.MarshalArgs(m.GetReference(), method, params, seed)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
@@ -72,12 +79,10 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	return nil
 }
 
-var INSATTR_Call_API = true
-
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
-	if err := m.verifySig(method, params, seed, sign); err != nil {
+	if err := m.VerifySig(method, params, seed, sign); err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
