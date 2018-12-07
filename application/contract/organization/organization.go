@@ -2,8 +2,8 @@ package organization
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/application/contract_interface/group"
-	"github.com/insolar/insolar/application/contract_interface/participant"
+	"github.com/insolar/insolar/application/noncontract/group"
+	"github.com/insolar/insolar/application/noncontract/participant"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )

@@ -1,7 +1,7 @@
 package group
 
 import (
-	"github.com/insolar/insolar/application/contract_interface/participant"
+	"github.com/insolar/insolar/application/noncontract/participant"
 )
 
 type Group struct {
