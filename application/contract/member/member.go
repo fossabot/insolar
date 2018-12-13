@@ -109,6 +109,9 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return m.addMemberToOrganization(rootDomain, params)
 	case "DumpAllOrganizationMembers":
 		return m.DumpAllOrganizationMembers(rootDomain, params)
+
+	case "CreateBProcess":
+		return m.createBProcessCall(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -240,4 +243,13 @@ func (m *Member) ToOut() ([]byte, error) {
 	}
 
 	return memberJSON, nil
+}
+
+func (m *Member) createBProcessCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var name string
+	if err := signer.UnmarshalParams(params, &name); err != nil {
+		return nil, fmt.Errorf("[ createBProcessCall ]: %s", err.Error())
+	}
+	return rootDomain.CreateBProcess(name)
 }

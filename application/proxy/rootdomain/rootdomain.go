@@ -621,3 +621,57 @@ func (r *RootDomain) DumpAllOrganizationMembersNoWait(organizationReferenceStr s
 
 	return nil
 }
+
+// CreateBProcess is proxy generated method
+func (r *RootDomain) CreateBProcess(name string) (string, error) {
+	var args [1]interface{}
+	args[0] = name
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateBProcess", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateBProcessNoWait is proxy generated method
+func (r *RootDomain) CreateBProcessNoWait(name string) error {
+	var args [1]interface{}
+	args[0] = name
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateBProcess", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

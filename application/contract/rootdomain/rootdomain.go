@@ -19,6 +19,7 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/application/proxy/bprocess"
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/organization"
 	"github.com/insolar/insolar/application/proxy/wallet"
@@ -200,4 +201,18 @@ func (rd *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string
 	organizationObject := organization.GetObject(organizationReference)
 
 	return organizationObject.GetMembers()
+}
+
+// CreateBProcess processes create business process request
+func (rd *RootDomain) CreateBProcess(name string) (string, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return "", fmt.Errorf("[ CreateOrganization ] Only Root member can create organization")
+	}
+	bprocessHolder := bprocess.New(name)
+	bp, err := bprocessHolder.AsChild(rd.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ CreateOrganization ] Can't save as child: %s", err.Error())
+	}
+
+	return bp.GetReference().String(), nil
 }
