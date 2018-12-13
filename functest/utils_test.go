@@ -96,27 +96,6 @@ func createMember(t *testing.T, name string) *user {
 	return member
 }
 
-func createOrganization(t *testing.T, name, requisites string) *user {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	result, err := signedRequest(&root, "CreateOrganization", name, member.pubKey, requisites)
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-	member.ref = ref
-	return member
-}
-
-func addMemberToOrganization(t *testing.T, memberRef, organizationRef string) string {
-	result, err := signedRequest(&root, "AddMemberToOrganization", memberRef, organizationRef)
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-	require.NotEqual(t, "", ref)
-
-	return ref
-}
-
 func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
 	balance, err := getBalance(caller, reference)
 	require.NoError(t, err)
