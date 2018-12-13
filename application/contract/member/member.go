@@ -17,6 +17,7 @@
 package member
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/application/noncontract/participant"
 
@@ -101,6 +102,13 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
 		return m.RegisterNodeCall(rootDomain, params)
+
+	case "CreateOrganization":
+		return m.createOrganizationCall(rootDomain, params)
+	case "AddMemberToOrganization":
+		return m.addMemberToOrganization(rootDomain, params)
+	case "DumpAllOrganizationMembers":
+		return m.DumpAllOrganizationMembers(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -192,4 +200,44 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	return string(cert), nil
+}
+
+func (m *Member) createOrganizationCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var name string
+	var key string
+	var requisites string
+	if err := signer.UnmarshalParams(params, &name, &key, &requisites); err != nil {
+		return nil, fmt.Errorf("[ createOrganizationCall ]: %s", err.Error())
+	}
+	return rootDomain.CreateOrganization(name, key, requisites)
+}
+
+func (m *Member) addMemberToOrganization(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var memberRef string
+	var organizationRef string
+	if err := signer.UnmarshalParams(params, &memberRef, &organizationRef); err != nil {
+		return nil, fmt.Errorf("[ addMemberToOrganization ]: %s", err.Error())
+	}
+	return rootDomain.AddMemberToOrganization(memberRef, organizationRef)
+}
+
+func (m *Member) DumpAllOrganizationMembers(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var organizationRef string
+	if err := signer.UnmarshalParams(params, &organizationRef); err != nil {
+		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ]: %s", err.Error())
+	}
+	return rootDomain.DumpAllOrganizationMembers(organizationRef)
+}
+
+func (m *Member) ToOut() ([]byte, error) {
+
+	memberJSON, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("[ ToOut ]: %s", err.Error())
+	}
+
+	return memberJSON, nil
 }

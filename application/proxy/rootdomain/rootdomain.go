@@ -513,9 +513,10 @@ func (r *RootDomain) CreateOrganizationNoWait(name string, key string, requisite
 }
 
 // AddMemberToOrganization is proxy generated method
-func (r *RootDomain) AddMemberToOrganization(memberReferenceStr string) (string, error) {
+func (r *RootDomain) AddMemberToOrganization(memberReferenceStr string, organizationReferenceStr string) (string, error) {
 	var args [2]interface{}
 	args[0] = memberReferenceStr
+	args[1] = organizationReferenceStr
 
 	var argsSerialized []byte
 
@@ -547,9 +548,10 @@ func (r *RootDomain) AddMemberToOrganization(memberReferenceStr string) (string,
 }
 
 // AddMemberToOrganizationNoWait is proxy generated method
-func (r *RootDomain) AddMemberToOrganizationNoWait(memberReferenceStr string) error {
+func (r *RootDomain) AddMemberToOrganizationNoWait(memberReferenceStr string, organizationReferenceStr string) error {
 	var args [2]interface{}
 	args[0] = memberReferenceStr
+	args[1] = organizationReferenceStr
 
 	var argsSerialized []byte
 
@@ -559,6 +561,60 @@ func (r *RootDomain) AddMemberToOrganizationNoWait(memberReferenceStr string) er
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "AddMemberToOrganization", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DumpAllOrganizationMembers is proxy generated method
+func (r *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string) ([]byte, error) {
+	var args [1]interface{}
+	args[0] = organizationReferenceStr
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizationMembers", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// DumpAllOrganizationMembersNoWait is proxy generated method
+func (r *RootDomain) DumpAllOrganizationMembersNoWait(organizationReferenceStr string) error {
+	var args [1]interface{}
+	args[0] = organizationReferenceStr
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizationMembers", argsSerialized)
 	if err != nil {
 		return err
 	}

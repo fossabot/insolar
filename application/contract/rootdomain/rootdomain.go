@@ -161,7 +161,7 @@ func (rd *RootDomain) CreateOrganization(name string, key string, requisites str
 }
 
 // AddMemberToOrganization processes add member to organization
-func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr, organizationReferenceStr string) (string, error) {
+func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr string, organizationReferenceStr string) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ AddMemberToOrganization ] Only Root member can create organizations")
 	}
@@ -177,7 +177,7 @@ func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr, organizationRe
 	}
 	key, err := memberObject.GetPublicKey()
 	if err != nil {
-		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get name : %s", err.Error())
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get key : %s", err.Error())
 	}
 
 	memberHolder := member.New(name, key)
@@ -187,4 +187,17 @@ func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr, organizationRe
 	}
 
 	return m.GetReference().String(), nil
+}
+
+// DumpAllOrganizationMembers processes dump all organization members
+func (rd *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string) (resultJSON []byte, err error) {
+
+	if *rd.GetContext().Caller != rd.RootMember {
+		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ] Only root can call this method")
+	}
+
+	organizationReference := core.NewRefFromBase58(organizationReferenceStr)
+	organizationObject := organization.GetObject(organizationReference)
+
+	return organizationObject.GetMembers()
 }

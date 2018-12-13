@@ -1,9 +1,12 @@
 package organization
 
 import (
+	"encoding/json"
 	"fmt"
+	contractMember "github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/noncontract/group"
 	"github.com/insolar/insolar/application/noncontract/participant"
+	proxyMember "github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -60,4 +63,38 @@ func (o *Organization) VerifySig(method string, params []byte, seed []byte, sign
 		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
 	return nil
+}
+
+// DumpAllOrganizationMembers processes dump all organization members
+func (o *Organization) GetMembers() (resultJSON []byte, err error) {
+
+	crefs, err := o.GetChildrenTyped(proxyMember.GetPrototype())
+	if err != nil {
+		return nil, fmt.Errorf("[ GetMembers ] Can't get children: %s", err.Error())
+	}
+
+	res := []contractMember.Member{}
+	for _, cref := range crefs {
+		m := proxyMember.GetObject(cref)
+
+		memberJSON, err := m.ToOut()
+		if err != nil {
+			return nil, fmt.Errorf("[ GetMembers ] Problem with making request: %s", err.Error())
+		}
+
+		cMember := contractMember.Member{}
+		err = json.Unmarshal(memberJSON, &cMember)
+		if err != nil {
+			return nil, fmt.Errorf("[ GetMembers ] Problem with unmarshal member from response: %s", err.Error())
+		}
+
+		res = append(res, cMember)
+	}
+
+	resultJSON, err = json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("[ GetMembers ] Problem with marshal members: %s", err.Error())
+	}
+
+	return resultJSON, nil
 }

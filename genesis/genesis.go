@@ -46,9 +46,12 @@ const (
 	walletContract    = "wallet"
 	memberContract    = "member"
 	allowanceContract = "allowance"
+
+	organizationContract = "organization"
 )
 
-var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
+var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord,
+	organizationContract}
 
 // Genesis is a component for precreation core contracts types and RootDomain instance
 type Genesis struct {
