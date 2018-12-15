@@ -675,3 +675,63 @@ func (r *RootDomain) CreateBProcessNoWait(name string) error {
 
 	return nil
 }
+
+// CreateDocType is proxy generated method
+func (r *RootDomain) CreateDocType(bprocessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) (string, error) {
+	var args [4]interface{}
+	args[0] = bprocessReferenceStr
+	args[1] = name
+	args[2] = fields
+	args[3] = attachments
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateDocType", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateDocTypeNoWait is proxy generated method
+func (r *RootDomain) CreateDocTypeNoWait(bprocessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) error {
+	var args [4]interface{}
+	args[0] = bprocessReferenceStr
+	args[1] = name
+	args[2] = fields
+	args[3] = attachments
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateDocType", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

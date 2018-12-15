@@ -19,6 +19,7 @@ package member
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/application/contract/doctype"
 	"github.com/insolar/insolar/application/noncontract/participant"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -252,4 +253,16 @@ func (m *Member) createBProcessCall(ref core.RecordRef, params []byte) (interfac
 		return nil, fmt.Errorf("[ createBProcessCall ]: %s", err.Error())
 	}
 	return rootDomain.CreateBProcess(name)
+}
+
+func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var bprocessReferenceStr string
+	var name string
+	var fields []doctype.Field
+	var attachments []doctype.Attachment
+	if err := signer.UnmarshalParams(params, &bprocessReferenceStr, &name, &fields, &attachments); err != nil {
+		return nil, fmt.Errorf("[ createDocTypeCall ]: %s", err.Error())
+	}
+	return rootDomain.CreateDocType(bprocessReferenceStr, name, fields, attachments)
 }
