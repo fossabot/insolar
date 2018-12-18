@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112XEbUnup48ZdZtni8ndHJUKpba6YXSLfgPFkddU.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112fJzWzvMFdYnVgayj1ETtro92DiFV8wwTWRtxkU.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -262,7 +262,7 @@ func (r *Member) VerifySig(method string, params []byte, seed []byte, sign []byt
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "VerifySig", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "VerifySig", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (r *Member) VerifySigNoWait(method string, params []byte, seed []byte, sign
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "VerifySig", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "VerifySig", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -438,7 +438,7 @@ func (r *Member) DumpAllOrganizationMembers(ref core.RecordRef, params []byte) (
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizationMembers", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizationMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -467,7 +467,7 @@ func (r *Member) DumpAllOrganizationMembersNoWait(ref core.RecordRef, params []b
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizationMembers", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizationMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -492,7 +492,7 @@ func (r *Member) ToOut() ([]byte, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToOut", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToOut", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -519,7 +519,7 @@ func (r *Member) ToOutNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToOut", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToOut", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

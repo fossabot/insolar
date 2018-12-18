@@ -1,4 +1,4 @@
-package organization
+package response
 
 import (
 	"github.com/insolar/insolar/core"
@@ -8,10 +8,10 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111yYZ1eavhxNT5Ui8qzMr5HoPUy1vgXwZtnQaeQX.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111UJKGHeveHVasjvqDtTq7sPd8c2C4aVVVnURF7W.11111111111111111111111111111111")
 
-// Organization holds proxy type
-type Organization struct {
+// Response holds proxy type
+type Response struct {
 	Reference core.RecordRef
 	Prototype core.RecordRef
 	Code      core.RecordRef
@@ -24,26 +24,26 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Organization, error) {
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Response, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Organization{Reference: ref}, nil
+	return &Response{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Organization, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Response, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Organization{Reference: ref}, nil
+	return &Response{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref core.RecordRef) (r *Organization) {
-	return &Organization{Reference: ref}
+func GetObject(ref core.RecordRef) (r *Response) {
+	return &Response{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -52,7 +52,7 @@ func GetPrototype() core.RecordRef {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) (*Organization, error) {
+func GetImplementationFrom(object core.RecordRef) (*Response, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -61,11 +61,10 @@ func GetImplementationFrom(object core.RecordRef) (*Organization, error) {
 }
 
 // New is constructor
-func New(name string, key string, requisites string) *ContractConstructorHolder {
-	var args [3]interface{}
+func New(name string, signature []byte) *ContractConstructorHolder {
+	var args [4]interface{}
 	args[0] = name
-	args[1] = key
-	args[2] = requisites
+	args[1] = signature
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -77,12 +76,12 @@ func New(name string, key string, requisites string) *ContractConstructorHolder 
 }
 
 // GetReference returns reference of the object
-func (r *Organization) GetReference() core.RecordRef {
+func (r *Response) GetReference() core.RecordRef {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Organization) GetPrototype() (core.RecordRef, error) {
+func (r *Response) GetPrototype() (core.RecordRef, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
@@ -112,7 +111,7 @@ func (r *Organization) GetPrototype() (core.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Organization) GetCode() (core.RecordRef, error) {
+func (r *Response) GetCode() (core.RecordRef, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 core.RecordRef
@@ -141,7 +140,7 @@ func (r *Organization) GetCode() (core.RecordRef, error) {
 }
 
 // GetName is proxy generated method
-func (r *Organization) GetName() (string, error) {
+func (r *Response) GetName() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -174,7 +173,7 @@ func (r *Organization) GetName() (string, error) {
 }
 
 // GetNameNoWait is proxy generated method
-func (r *Organization) GetNameNoWait() error {
+func (r *Response) GetNameNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -192,8 +191,8 @@ func (r *Organization) GetNameNoWait() error {
 	return nil
 }
 
-// GetPublicKey is proxy generated method
-func (r *Organization) GetPublicKey() (string, error) {
+// GetAgreement is proxy generated method
+func (r *Response) GetAgreement() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -209,7 +208,7 @@ func (r *Organization) GetPublicKey() (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetAgreement", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -225,8 +224,8 @@ func (r *Organization) GetPublicKey() (string, error) {
 	return ret0, nil
 }
 
-// GetPublicKeyNoWait is proxy generated method
-func (r *Organization) GetPublicKeyNoWait() error {
+// GetAgreementNoWait is proxy generated method
+func (r *Response) GetAgreementNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -236,7 +235,7 @@ func (r *Organization) GetPublicKeyNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetAgreement", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -244,8 +243,8 @@ func (r *Organization) GetPublicKeyNoWait() error {
 	return nil
 }
 
-// GetRequisites is proxy generated method
-func (r *Organization) GetRequisites() (string, error) {
+// GetReason is proxy generated method
+func (r *Response) GetReason() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -261,7 +260,7 @@ func (r *Organization) GetRequisites() (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRequisites", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetReason", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -277,8 +276,8 @@ func (r *Organization) GetRequisites() (string, error) {
 	return ret0, nil
 }
 
-// GetRequisitesNoWait is proxy generated method
-func (r *Organization) GetRequisitesNoWait() error {
+// GetReasonNoWait is proxy generated method
+func (r *Response) GetReasonNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -288,7 +287,7 @@ func (r *Organization) GetRequisitesNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRequisites", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetReason", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -296,66 +295,8 @@ func (r *Organization) GetRequisitesNoWait() error {
 	return nil
 }
 
-// VerifySig is proxy generated method
-func (r *Organization) VerifySig(method string, params []byte, seed []byte, sign []byte) error {
-	var args [4]interface{}
-	args[0] = method
-	args[1] = params
-	args[2] = seed
-	args[3] = sign
-
-	var argsSerialized []byte
-
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "VerifySig", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return err
-	}
-
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
-// VerifySigNoWait is proxy generated method
-func (r *Organization) VerifySigNoWait(method string, params []byte, seed []byte, sign []byte) error {
-	var args [4]interface{}
-	args[0] = method
-	args[1] = params
-	args[2] = seed
-	args[3] = sign
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "VerifySig", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetMembers is proxy generated method
-func (r *Organization) GetMembers() ([]byte, error) {
+// GetSignature is proxy generated method
+func (r *Response) GetSignature() ([]byte, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -371,7 +312,7 @@ func (r *Organization) GetMembers() ([]byte, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetMembers", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetSignature", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -387,8 +328,8 @@ func (r *Organization) GetMembers() ([]byte, error) {
 	return ret0, nil
 }
 
-// GetMembersNoWait is proxy generated method
-func (r *Organization) GetMembersNoWait() error {
+// GetSignatureNoWait is proxy generated method
+func (r *Response) GetSignatureNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -398,7 +339,7 @@ func (r *Organization) GetMembersNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetMembers", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetSignature", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

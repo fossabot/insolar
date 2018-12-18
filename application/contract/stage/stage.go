@@ -1,7 +1,7 @@
 package stage
 
 import (
-	"github.com/insolar/insolar/application/contract/elementtemplate"
+	"github.com/insolar/insolar/application/contract/elemtemplate"
 	"github.com/insolar/insolar/application/contract/response"
 	"github.com/insolar/insolar/application/noncontract/participant"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -18,7 +18,7 @@ const (
 
 type Stage struct {
 	foundation.BaseContract
-	elementtemplate.ElementTemplate
+	elemtemplate.ElemTemplate
 	Participant     participant.Participant
 	DocsPermissions [][]DocPermission
 	Response        response.Response
@@ -28,7 +28,7 @@ type Stage struct {
 func New(name string, participant participant.Participant, docsPermissions [][]DocPermission, response response.Response, expirationDate string) (*Stage, error) {
 	return &Stage{
 		foundation.BaseContract{},
-		elementtemplate.ElementTemplate{
+		elemtemplate.ElemTemplate{
 			Name: name,
 		},
 		participant,

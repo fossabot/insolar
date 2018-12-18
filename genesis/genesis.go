@@ -52,7 +52,7 @@ const (
 	docTypeContract         = "doctype"
 	procTemplateContract    = "proctemplate"
 	documentContract        = "document"
-	elementTemplateContract = "elementtemplate"
+	elementTemplateContract = "eltemplate"
 	elementContract         = "element"
 	processContract         = "process"
 )

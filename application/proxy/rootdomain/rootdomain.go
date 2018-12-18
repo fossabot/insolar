@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111cwjcgBPoSAeY6At3B1fEPSVsBaptaSBnv3U54z.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11113ToHeNuBGUmS1sEEEmAL7b4WaZtjBjYPx27qT8W.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -475,7 +475,7 @@ func (r *RootDomain) CreateOrganization(name string, key string, requisites stri
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateOrganization", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateOrganization", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -505,7 +505,7 @@ func (r *RootDomain) CreateOrganizationNoWait(name string, key string, requisite
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateOrganization", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateOrganization", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -532,7 +532,7 @@ func (r *RootDomain) AddMemberToOrganization(memberReferenceStr string, organiza
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AddMemberToOrganization", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AddMemberToOrganization", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -561,7 +561,7 @@ func (r *RootDomain) AddMemberToOrganizationNoWait(memberReferenceStr string, or
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "AddMemberToOrganization", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "AddMemberToOrganization", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -587,7 +587,7 @@ func (r *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string)
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizationMembers", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizationMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -615,7 +615,7 @@ func (r *RootDomain) DumpAllOrganizationMembersNoWait(organizationReferenceStr s
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizationMembers", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizationMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -641,7 +641,7 @@ func (r *RootDomain) CreateBProcess(name string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateBProcess", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateBProcess", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -669,7 +669,7 @@ func (r *RootDomain) CreateBProcessNoWait(name string) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateBProcess", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateBProcess", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -698,7 +698,7 @@ func (r *RootDomain) CreateDocType(bprocessReferenceStr string, name string, fie
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateDocType", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateDocType", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -729,7 +729,7 @@ func (r *RootDomain) CreateDocTypeNoWait(bprocessReferenceStr string, name strin
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateDocType", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateDocType", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

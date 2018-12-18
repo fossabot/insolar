@@ -79,6 +79,12 @@ type Field struct {
 
 func (e Field) GetResult(ref core.RecordRef) (result []byte, err error) {
 	//todo  get docs by ref
+	//
+	//iterator, err := ref.NewChildrenTypedIterator(document.GetPrototype())
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ GetResult ] Can't get children: %s", err.Error())
+	//}
+
 	return nil, nil
 }
 
