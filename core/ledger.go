@@ -57,11 +57,8 @@ type Ledger interface {
 // PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
-	// Current returns current pulse structure.
-	Current(context.Context) (*Pulse, error)
-
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
-	Set(ctx context.Context, pulse Pulse, dry bool) error
+	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
 
 // JetCoordinator provides methods for calculating Jet affinity
@@ -69,10 +66,13 @@ type PulseManager interface {
 //go:generate minimock -i github.com/insolar/insolar/core.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber, node RecordRef) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj *RecordRef, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) ([]RecordRef, error)
+
+	// AmI checks for role on concrete pulse for current node.
+	AmI(ctx context.Context, role DynamicRole, obj *RecordID, pulse PulseNumber) (bool, error)
 
 	// GetActiveNodes return active nodes for specified pulse.
 	GetActiveNodes(pulse PulseNumber) ([]Node, error)
@@ -196,6 +196,7 @@ type CodeDescriptor interface {
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
+//go:generate minimock -i github.com/insolar/insolar/core.ObjectDescriptor -o ../testutils -s _mock.go
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
 	HeadRef() *RecordRef
@@ -223,6 +224,9 @@ type ObjectDescriptor interface {
 
 	// Parent returns object's parent.
 	Parent() *RecordRef
+
+	// HasPendingRequests returns true if the object has unclosed requests.
+	HasPendingRequests() bool
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
@@ -261,4 +265,18 @@ type StorageExportResult struct {
 type StorageExporter interface {
 	// Export returns data view from storage.
 	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
+}
+
+var (
+	// TODOJetID temporary stub for passing jet ID in ledger functions
+	// on period Jet ID full implementation
+	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
+	TODOJetID = *NewRecordID(PulseNumberJet, nil)
+	DomainID  = *NewRecordID(0, nil)
+)
+
+// PulseStorage provides the interface for fetching current pulse of the system
+//go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
+type PulseStorage interface {
+	Current(ctx context.Context) (*Pulse, error)
 }

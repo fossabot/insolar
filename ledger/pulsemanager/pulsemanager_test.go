@@ -25,40 +25,20 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestPulseManager_Current(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	c := core.Components{LogicRunner: lr}
-	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
-	defer cleaner()
-
-	pm := ledger.GetPulseManager()
-
-	pulse, err := pm.Current(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, core.GenesisPulse.PulseNumber, pulse.PulseNumber)
-}
 
 func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
+	jetID := core.TODOJetID
 
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
@@ -67,15 +47,17 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	defer dbcancel()
 	firstID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{})
 	firstIndex := index.ObjectLifeline{
 		LatestState: firstID,
 	}
-	_ = db.SetObjectIndex(ctx, firstID, &firstIndex)
+	_ = db.SetObjectIndex(ctx, jetID, firstID, &firstIndex)
 	codeRecord := &record.CodeRecord{}
 	secondID, _ := db.SetRecord(
 		ctx,
+		jetID,
 		core.GenesisPulse.PulseNumber,
 		codeRecord,
 	)
@@ -91,8 +73,11 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
 	}
 
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageMock.Return(recentMock)
+
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(p context.Context, p1 core.Message, _ core.Pulse, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
 		if !ok {
 			return nil, nil
@@ -127,17 +112,32 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() {}
 
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+		signature := core.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+
+	pulseStorageMock := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	pulseStorageMock.LockMock.Return()
+	pulseStorageMock.UnlockMock.Return()
+
 	pm.LR = lr
-	pm.Recent = recentMock
+
+	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock
 	pm.GIL = gil
 	pm.ActiveListSwapper = alsMock
+	pm.CryptographyService = cryptoServiceMock
+	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+	pm.PulseStorage = pulseStorageMock
 
 	// Act
-	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, false)
+	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
-	savedIndex, err := db.GetObjectIndex(ctx, firstID, false)
+	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
 	require.NoError(t, err)
 
 	// Assert

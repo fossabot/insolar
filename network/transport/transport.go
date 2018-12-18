@@ -40,8 +40,8 @@ type Transport interface {
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
 	SendPacket(p *packet.Packet) error
 
-	// Start starts thread to listen incoming packets.
-	Start(ctx context.Context) error
+	// Listen starts thread to listen incoming packets.
+	Listen(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()
@@ -61,9 +61,10 @@ type Transport interface {
 
 // NewTransport creates new Transport with particular configuration
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
+	// TODO: let each transport creates connection in their constructor
 	conn, publicAddress, err := NewConnection(cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create connection.")
+		return nil, errors.Wrap(err, "[ NewTransport ] Failed to create connection.")
 	}
 
 	switch cfg.Protocol {
@@ -77,6 +78,8 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 		return newKCPTransport(conn, proxy, publicAddress)
 	case "PURE_UDP":
 		return newUDPTransport(conn, proxy, publicAddress)
+	case "QUIC":
+		return newQuicTransport(conn, proxy, publicAddress)
 	default:
 		closeVerbose(conn)
 		return nil, errors.New("invalid transport configuration")
@@ -87,12 +90,12 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) {
 	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "Failed to create connection")
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create connection")
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
 		closeVerbose(conn)
-		return nil, "", errors.Wrap(err, "Failed to create resolver")
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
 	}
 	return conn, publicAddress, nil
 }
