@@ -3,6 +3,7 @@ package value
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/insolar/insolar/core"
 	"time"
 )
 
@@ -20,7 +21,7 @@ const (
 )
 
 type Value interface {
-	GetResult() []byte
+	GetResult(ref core.RecordRef) []byte
 }
 
 type ArithmeticExpression struct {
@@ -30,22 +31,22 @@ type ArithmeticExpression struct {
 	RightValue Value
 }
 
-func ToInt(v Value) (u uint64, err error) {
-	return binary.BigEndian.Uint64(v.GetResult()), nil
+func ToInt(ref core.RecordRef, v Value) (u uint64, err error) {
+	return binary.BigEndian.Uint64(v.GetResult(ref)), nil
 }
-func ToDate(v Value) (t time.Time, err error) {
-	return time.Parse(time.UTC.String(), string(v.GetResult()))
+func ToDate(ref core.RecordRef, v Value) (t time.Time, err error) {
+	return time.Parse(time.UTC.String(), string(v.GetResult(ref)))
 }
 
-func (e ArithmeticExpression) GetResult() (result []byte, err error) {
+func (e ArithmeticExpression) GetResult(ref core.RecordRef) (result []byte, err error) {
 	switch e.Type {
 	case IntegerType:
 
-		l, err := ToInt(e.LeftValue)
+		l, err := ToInt(ref, e.LeftValue)
 		if err != nil {
 			return nil, err
 		}
-		r, err := ToInt(e.RightValue)
+		r, err := ToInt(ref, e.RightValue)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +77,8 @@ type Field struct {
 	FieldIndex int
 }
 
-func (e Field) GetResult() (result []byte, err error) {
+func (e Field) GetResult(ref core.RecordRef) (result []byte, err error) {
+	//todo  get docs by ref
 	return nil, nil
 }
 

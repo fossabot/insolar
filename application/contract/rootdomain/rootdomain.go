@@ -86,6 +86,9 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	caller := *rd.GetContext().Caller
 	ref, err := core.NewRefFromBase58(reference)
 	if err != nil {
+		return nil, fmt.Errorf("[ DumpUserInfo ] Failed to parse reference: %s", err.Error())
+	}
+	if err != nil {
 		return nil, err
 	}
 	if *ref != caller && caller != rd.RootMember {
@@ -177,7 +180,7 @@ func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr string, organiz
 		return "", fmt.Errorf("[ AddMemberToOrganization ] Only Root member can create organizations")
 	}
 
-	memberReference := core.NewRefFromBase58(memberReferenceStr)
+	memberReference, err := core.NewRefFromBase58(memberReferenceStr)
 	organizationReference := core.NewRefFromBase58(organizationReferenceStr)
 
 	memberObject := member.GetObject(memberReference)
@@ -207,7 +210,7 @@ func (rd *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string
 		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ] Only root can call this method")
 	}
 
-	organizationReference := core.NewRefFromBase58(organizationReferenceStr)
+	organizationReference, err := core.NewRefFromBase58(organizationReferenceStr)
 	organizationObject := organization.GetObject(organizationReference)
 
 	return organizationObject.GetMembers()

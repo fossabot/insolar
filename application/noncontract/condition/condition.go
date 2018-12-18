@@ -3,6 +3,7 @@ package condition
 import (
 	"fmt"
 	"github.com/insolar/insolar/application/contract/value"
+	"github.com/insolar/insolar/core"
 )
 
 type LogicOperation string
@@ -18,7 +19,7 @@ const (
 )
 
 type Condition interface {
-	GetResult() bool
+	GetResult(ref core.RecordRef) bool
 }
 
 type LogicCondition struct {
@@ -27,12 +28,12 @@ type LogicCondition struct {
 	RightValue Condition
 }
 
-func (c LogicCondition) GetResult() (result bool) {
+func (c LogicCondition) GetResult(ref core.RecordRef) (result bool) {
 	switch c.Operation {
 	case AndOperation:
-		result = c.LeftValue.GetResult() && c.RightValue.GetResult()
+		result = c.LeftValue.GetResult(ref) && c.RightValue.GetResult(ref)
 	case OrOperation:
-		result = c.LeftValue.GetResult() || c.RightValue.GetResult()
+		result = c.LeftValue.GetResult(ref) || c.RightValue.GetResult(ref)
 	default:
 		result = false
 	}
@@ -47,16 +48,16 @@ type ComparisonCondition struct {
 	RightValue value.Value
 }
 
-func (c ComparisonCondition) GetResult() (result bool, err error) {
+func (c ComparisonCondition) GetResult(ref core.RecordRef) (result bool, err error) {
 	switch c.Type {
 
 	case value.IntegerType:
 
-		l, err := value.ToInt(c.LeftValue)
+		l, err := value.ToInt(ref, c.LeftValue)
 		if err != nil {
 			return false, err
 		}
-		r, err := value.ToInt(c.RightValue)
+		r, err := value.ToInt(ref, c.RightValue)
 		if err != nil {
 			return false, err
 		}
@@ -74,11 +75,11 @@ func (c ComparisonCondition) GetResult() (result bool, err error) {
 
 	case value.DateType:
 
-		l, err := value.ToDate(c.LeftValue)
+		l, err := value.ToDate(ref, c.LeftValue)
 		if err != nil {
 			return false, err
 		}
-		r, err := value.ToDate(c.RightValue)
+		r, err := value.ToDate(ref, c.RightValue)
 		if err != nil {
 			return false, err
 		}

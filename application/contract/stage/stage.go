@@ -1,8 +1,8 @@
 package stage
 
 import (
+	"github.com/insolar/insolar/application/contract/elementtemplate"
 	"github.com/insolar/insolar/application/contract/response"
-	"github.com/insolar/insolar/application/noncontract/elementtemplate"
 	"github.com/insolar/insolar/application/noncontract/participant"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
