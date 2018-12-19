@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/application/proxy/bprocess"
 	"github.com/insolar/insolar/application/proxy/doctype"
+	"github.com/insolar/insolar/application/proxy/elemtemplate"
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/organization"
+	"github.com/insolar/insolar/application/proxy/proctemplate"
+	"github.com/insolar/insolar/application/proxy/stagetemplate"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -181,9 +184,15 @@ func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr string, organiz
 	}
 
 	memberReference, err := core.NewRefFromBase58(memberReferenceStr)
-	organizationReference := core.NewRefFromBase58(organizationReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Failed to parse member reference: %s", err.Error())
+	}
+	organizationReference, err := core.NewRefFromBase58(organizationReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Failed to parse organization reference: %s", err.Error())
+	}
 
-	memberObject := member.GetObject(memberReference)
+	memberObject := member.GetObject(*memberReference)
 
 	name, err := memberObject.GetName()
 	if err != nil {
@@ -195,7 +204,7 @@ func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr string, organiz
 	}
 
 	memberHolder := member.New(name, key)
-	m, err := memberHolder.AsChild(organizationReference)
+	m, err := memberHolder.AsChild(*organizationReference)
 	if err != nil {
 		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't save as child: %s", err.Error())
 	}
@@ -211,7 +220,10 @@ func (rd *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string
 	}
 
 	organizationReference, err := core.NewRefFromBase58(organizationReferenceStr)
-	organizationObject := organization.GetObject(organizationReference)
+	if err != nil {
+		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ] Failed to parse organization reference: %s", err.Error())
+	}
+	organizationObject := organization.GetObject(*organizationReference)
 
 	return organizationObject.GetMembers()
 }
@@ -221,8 +233,8 @@ func (rd *RootDomain) CreateBProcess(name string) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ CreateOrganization ] Only Root member can create organization")
 	}
-	bprocessHolder := bprocess.New(name)
-	bp, err := bprocessHolder.AsChild(rd.GetReference())
+	bProcessHolder := bprocess.New(name)
+	bp, err := bProcessHolder.AsChild(rd.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateOrganization ] Can't save as child: %s", err.Error())
 	}
@@ -230,17 +242,74 @@ func (rd *RootDomain) CreateBProcess(name string) (string, error) {
 	return bp.GetReference().String(), nil
 }
 
-// CreateDocType processes create document type request
-func (rd *RootDomain) CreateDocType(bprocessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) (string, error) {
+// CreateBProcess processes create business process request
+func (rd *RootDomain) СreateProcTemplate(bProcessReferenceStr string, name string) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ CreateDocType ] Only Root member can create organization")
 	}
-	bprocessReference := core.NewRefFromBase58(bprocessReferenceStr)
+	bProcessReference, err := core.NewRefFromBase58(bProcessReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
+	}
+	procTemplateHolder := proctemplate.New(name)
+	pt, err := procTemplateHolder.AsChild(*bProcessReference)
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
+	}
+
+	return pt.GetReference().String(), nil
+}
+
+// CreateDocType processes create document type request
+func (rd *RootDomain) CreateDocType(bProcessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) (string, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return "", fmt.Errorf("[ CreateDocType ] Only Root member can create organization")
+	}
+	bProcessReference, err := core.NewRefFromBase58(bProcessReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
+	}
 	doctypeHolder := doctype.New(name, fields, attachments)
-	dt, err := doctypeHolder.AsChild(bprocessReference)
+	dt, err := doctypeHolder.AsChild(*bProcessReference)
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
 	}
 
 	return dt.GetReference().String(), nil
+}
+
+// CreateStageTemplate processes create stage request
+func (rd *RootDomain) CreateStageTemplate(bProcessReferenceStr string, name string, previousElementsRefs []string, participantsRefs []string, expirationDate string) (string, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return "", fmt.Errorf("[ CreateDocType ] Only Root member can create organization")
+	}
+	bProcessReference, err := core.NewRefFromBase58(bProcessReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
+	}
+
+	var previousElements [len(previousElementsRefs)]elemtemplate.ElemTemplate
+	for i, refStr := range previousElementsRefs {
+		previousElementRef, err := core.NewRefFromBase58(refStr)
+		if err != nil {
+			return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
+		}
+
+		//todo nextElement
+		previousElements[i] = *elemtemplate.GetObject(*previousElementRef)
+	}
+
+	elemTemplateHolder := elemtemplate.New(name, previousElements[:])
+	et, err := elemTemplateHolder.AsChild(*bProcessReference)
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
+	}
+
+	stageTemplateHolderHolder := stagetemplate.New(name)
+	st, err := stageTemplateHolderHolder.AsChild(et.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
+	}
+
+	return st.GetReference().String(), nil
 }
