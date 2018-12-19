@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	contractMember "github.com/insolar/insolar/application/contract/member"
-	"github.com/insolar/insolar/application/noncontract/group"
-	"github.com/insolar/insolar/application/noncontract/participant"
+	"github.com/insolar/insolar/application/proxy/allowance"
 	proxyMember "github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -13,31 +12,38 @@ import (
 
 type Organization struct {
 	foundation.BaseContract
-	group.Group
+	Name       string
+	PublicKey  string
 	Requisites string
+}
+
+func (o *Organization) ToOut() ([]byte, error) {
+
+	memberJSON, err := json.Marshal(o)
+	if err != nil {
+		return nil, fmt.Errorf("[ ToOut ]: %s", err.Error())
+	}
+
+	return memberJSON, nil
 }
 
 func New(name string, key string, requisites string) (*Organization, error) {
 	return &Organization{
-		foundation.BaseContract{},
-		group.Group{
-			participant.Participant{name, key},
-		},
-		requisites}, nil
+		Name:       name,
+		PublicKey:  key,
+		Requisites: requisites,
+	}, nil
 }
 
-///////////////////impl/////////////////////
 func (o *Organization) GetName() (string, error) {
-	return o.Participant.GetName()
+	return o.Name, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
 func (o *Organization) GetPublicKey() (string, error) {
-	return o.Participant.GetPublicKey()
+	return o.PublicKey, nil
 }
-
-///////////////////impl end//////////////////
 
 func (o *Organization) GetRequisites() (string, error) {
 	return o.Requisites, nil
@@ -68,13 +74,18 @@ func (o *Organization) VerifySig(method string, params []byte, seed []byte, sign
 // DumpAllOrganizationMembers processes dump all organization members
 func (o *Organization) GetMembers() (resultJSON []byte, err error) {
 
-	crefs, err := o.GetChildrenTyped(proxyMember.GetPrototype())
+	iterator, err := o.NewChildrenTypedIterator(allowance.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ GetMembers ] Can't get children: %s", err.Error())
 	}
 
 	res := []contractMember.Member{}
-	for _, cref := range crefs {
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("[ GetMembers ] Can't get next child: %s", err.Error())
+		}
+
 		m := proxyMember.GetObject(cref)
 
 		memberJSON, err := m.ToOut()

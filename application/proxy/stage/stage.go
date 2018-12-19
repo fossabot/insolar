@@ -1,8 +1,8 @@
 package stage
 
 import (
+	"github.com/insolar/insolar/application/contract/participant"
 	"github.com/insolar/insolar/application/contract/response"
-	"github.com/insolar/insolar/application/noncontract/participant"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
@@ -12,7 +12,7 @@ type DocPermission string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11113cvjzMt5EEvCxk4Ykocz9atU3L14j92bDmYsnHQ.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("111121XpCVcbZhDZqHWo7o9yQtXpf3rns1cmtyC6ZiC.11111111111111111111111111111111")
 
 // Stage holds proxy type
 type Stage struct {

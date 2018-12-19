@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112fJzWzvMFdYnVgayj1ETtro92DiFV8wwTWRtxkU.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111EppMahzeVLvoKAs8i1kxyLJyXd98X9v6msbW7C.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -137,6 +137,58 @@ func (r *Member) GetCode() (core.RecordRef, error) {
 	}
 
 	return r.Code, nil
+}
+
+// ToOut is proxy generated method
+func (r *Member) ToOut() ([]byte, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToOut", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// ToOutNoWait is proxy generated method
+func (r *Member) ToOutNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToOut", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetName is proxy generated method
@@ -412,114 +464,6 @@ func (r *Member) RegisterNodeCallNoWait(ref core.RecordRef, params []byte) error
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNodeCall", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DumpAllOrganizationMembers is proxy generated method
-func (r *Member) DumpAllOrganizationMembers(ref core.RecordRef, params []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = ref
-	args[1] = params
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 interface{}
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizationMembers", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// DumpAllOrganizationMembersNoWait is proxy generated method
-func (r *Member) DumpAllOrganizationMembersNoWait(ref core.RecordRef, params []byte) error {
-	var args [2]interface{}
-	args[0] = ref
-	args[1] = params
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizationMembers", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ToOut is proxy generated method
-func (r *Member) ToOut() ([]byte, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 []byte
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToOut", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// ToOutNoWait is proxy generated method
-func (r *Member) ToOutNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToOut", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

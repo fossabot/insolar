@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11113ToHeNuBGUmS1sEEEmAL7b4WaZtjBjYPx27qT8W.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112FWAdxWLC8ZGs41puBscPvFZoVwWUnuBobK2dLD.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -677,10 +677,66 @@ func (r *RootDomain) CreateBProcessNoWait(name string) error {
 	return nil
 }
 
+// СreateProcTemplate is proxy generated method
+func (r *RootDomain) СreateProcTemplate(bProcessReferenceStr string, name string) (string, error) {
+	var args [2]interface{}
+	args[0] = bProcessReferenceStr
+	args[1] = name
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "СreateProcTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// СreateProcTemplateNoWait is proxy generated method
+func (r *RootDomain) СreateProcTemplateNoWait(bProcessReferenceStr string, name string) error {
+	var args [2]interface{}
+	args[0] = bProcessReferenceStr
+	args[1] = name
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "СreateProcTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CreateDocType is proxy generated method
-func (r *RootDomain) CreateDocType(bprocessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) (string, error) {
+func (r *RootDomain) CreateDocType(bProcessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) (string, error) {
 	var args [4]interface{}
-	args[0] = bprocessReferenceStr
+	args[0] = bProcessReferenceStr
 	args[1] = name
 	args[2] = fields
 	args[3] = attachments
@@ -715,9 +771,9 @@ func (r *RootDomain) CreateDocType(bprocessReferenceStr string, name string, fie
 }
 
 // CreateDocTypeNoWait is proxy generated method
-func (r *RootDomain) CreateDocTypeNoWait(bprocessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) error {
+func (r *RootDomain) CreateDocTypeNoWait(bProcessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) error {
 	var args [4]interface{}
-	args[0] = bprocessReferenceStr
+	args[0] = bProcessReferenceStr
 	args[1] = name
 	args[2] = fields
 	args[3] = attachments
@@ -730,6 +786,68 @@ func (r *RootDomain) CreateDocTypeNoWait(bprocessReferenceStr string, name strin
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateDocType", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateStageTemplate is proxy generated method
+func (r *RootDomain) CreateStageTemplate(bProcessReferenceStr string, name string, previousElementsRefs []string, participantsRefs []string, expirationDate string) (string, error) {
+	var args [5]interface{}
+	args[0] = bProcessReferenceStr
+	args[1] = name
+	args[2] = previousElementsRefs
+	args[3] = participantsRefs
+	args[4] = expirationDate
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateStageTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateStageTemplateNoWait is proxy generated method
+func (r *RootDomain) CreateStageTemplateNoWait(bProcessReferenceStr string, name string, previousElementsRefs []string, participantsRefs []string, expirationDate string) error {
+	var args [5]interface{}
+	args[0] = bProcessReferenceStr
+	args[1] = name
+	args[2] = previousElementsRefs
+	args[3] = participantsRefs
+	args[4] = expirationDate
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateStageTemplate", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

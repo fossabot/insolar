@@ -2,7 +2,7 @@ package condition
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/application/contract/value"
+	"github.com/insolar/insolar/application/noncontract/value"
 	"github.com/insolar/insolar/core"
 )
 

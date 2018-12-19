@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/application/contract/doctype"
-	"github.com/insolar/insolar/application/noncontract/participant"
-
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
@@ -32,30 +30,36 @@ import (
 
 type Member struct {
 	foundation.BaseContract
-	participant.Participant
+	Name      string
+	PublicKey string
+}
+
+func (m *Member) ToOut() ([]byte, error) {
+
+	memberJSON, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("[ ToOut ]: %s", err.Error())
+	}
+
+	return memberJSON, nil
 }
 
 func New(name string, key string) (*Member, error) {
 	return &Member{
-		foundation.BaseContract{},
-		participant.Participant{
-			Name:      name,
-			PublicKey: key,
-		}}, nil
+		Name:      name,
+		PublicKey: key,
+	}, nil
 }
 
-///////////////////impl/////////////////////
 func (m *Member) GetName() (string, error) {
-	return m.Participant.GetName()
+	return m.Name, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
 func (m *Member) GetPublicKey() (string, error) {
-	return m.Participant.GetPublicKey()
+	return m.PublicKey, nil
 }
-
-///////////////////impl end/////////////////
 
 var INSATTR_Call_API = true
 
@@ -109,10 +113,13 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "AddMemberToOrganization":
 		return m.addMemberToOrganization(rootDomain, params)
 	case "DumpAllOrganizationMembers":
-		return m.DumpAllOrganizationMembers(rootDomain, params)
-
-	case "CreateBProcess":
+		return m.dumpAllOrganizationMembers(rootDomain, params)
+	case "CreateBusinessArea":
 		return m.createBProcessCall(rootDomain, params)
+	case "CreateProcessTemplate":
+		return m.createProcTemplate(rootDomain, params)
+	case "createDocumentType":
+		return m.createDocTypeCall(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -234,23 +241,13 @@ func (m *Member) addMemberToOrganization(ref core.RecordRef, params []byte) (int
 	return rootDomain.AddMemberToOrganization(memberRef, organizationRef)
 }
 
-func (m *Member) DumpAllOrganizationMembers(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) dumpAllOrganizationMembers(ref core.RecordRef, params []byte) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(ref)
 	var organizationRef string
 	if err := signer.UnmarshalParams(params, &organizationRef); err != nil {
-		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ]: %s", err.Error())
+		return nil, fmt.Errorf("[ dumpAllOrganizationMembers ]: %s", err.Error())
 	}
 	return rootDomain.DumpAllOrganizationMembers(organizationRef)
-}
-
-func (m *Member) ToOut() ([]byte, error) {
-
-	memberJSON, err := json.Marshal(m)
-	if err != nil {
-		return nil, fmt.Errorf("[ ToOut ]: %s", err.Error())
-	}
-
-	return memberJSON, nil
 }
 
 func (m *Member) createBProcessCall(ref core.RecordRef, params []byte) (interface{}, error) {
@@ -262,14 +259,24 @@ func (m *Member) createBProcessCall(ref core.RecordRef, params []byte) (interfac
 	return rootDomain.CreateBProcess(name)
 }
 
+func (m *Member) createProcTemplate(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var bProcessReferenceStr string
+	var name string
+	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &name); err != nil {
+		return nil, fmt.Errorf("[ createDocTypeCall ]: %s", err.Error())
+	}
+	return rootDomain.СreateProcTemplate(bProcessReferenceStr, name)
+}
+
 func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(ref)
-	var bprocessReferenceStr string
+	var bProcessReferenceStr string
 	var name string
 	var fields []doctype.Field
 	var attachments []doctype.Attachment
-	if err := signer.UnmarshalParams(params, &bprocessReferenceStr, &name, &fields, &attachments); err != nil {
+	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &name, &fields, &attachments); err != nil {
 		return nil, fmt.Errorf("[ createDocTypeCall ]: %s", err.Error())
 	}
-	return rootDomain.CreateDocType(bprocessReferenceStr, name, fields, attachments)
+	return rootDomain.CreateDocType(bProcessReferenceStr, name, fields, attachments)
 }
