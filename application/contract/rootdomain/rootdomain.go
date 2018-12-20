@@ -174,6 +174,37 @@ func (rd *RootDomain) CreateOrganization(name string, key string, requisites str
 	return o.GetReference().String(), nil
 }
 
+// DumpAllOrganizations processes dump all users request
+func (rd *RootDomain) DumpAllOrganizations() ([]byte, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return nil, fmt.Errorf("[ DumpAllOrganizations ] Only root can call this method")
+	}
+	res := []map[string]interface{}{}
+	iterator, err := rd.NewChildrenTypedIterator(organization.GetPrototype())
+	if err != nil {
+		return nil, fmt.Errorf("[ DumpAllOrganizations ] Can't get children: %s", err.Error())
+	}
+
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("[ DumpAllOrganizations ] Can't get next child: %s", err.Error())
+		}
+
+		if cref == rd.RootMember {
+			continue
+		}
+		m := member.GetObject(cref)
+		userInfo, err := rd.getUserInfoMap(m)
+		if err != nil {
+			return nil, fmt.Errorf("[ DumpAllOrganizations ] Problem with making request: %s", err.Error())
+		}
+		res = append(res, userInfo)
+	}
+	resJSON, _ := json.Marshal(res)
+	return resJSON, nil
+}
+
 // AddMemberToOrganization processes add member to organization
 func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr string, organizationReferenceStr string) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
@@ -210,17 +241,17 @@ func (rd *RootDomain) AddMemberToOrganization(memberReferenceStr string, organiz
 }
 
 // DumpAllOrganizationMembers processes dump all organization members
-func (rd *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string) (resultJSON []byte, err error) {
+func (rd *RootDomain) DumpAllOrganizationMembers(refStr string) (resultJSON []byte, err error) {
 
 	if *rd.GetContext().Caller != rd.RootMember {
 		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ] Only root can call this method")
 	}
 
-	organizationReference, err := core.NewRefFromBase58(organizationReferenceStr)
+	ref, err := core.NewRefFromBase58(refStr)
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ] Failed to parse organization reference: %s", err.Error())
 	}
-	organizationObject := organization.GetObject(*organizationReference)
+	organizationObject := organization.GetObject(*ref)
 
 	return organizationObject.GetMembers()
 }
@@ -237,6 +268,22 @@ func (rd *RootDomain) CreateBProcess(name string) (string, error) {
 	}
 
 	return bp.GetReference().String(), nil
+}
+
+// DumpAllBProcesses processes dump all bProcesses request
+func (rd *RootDomain) DumpAllBProcesses() (resultJSON []byte, err error) {
+
+	if *rd.GetContext().Caller != rd.RootMember {
+		return nil, fmt.Errorf("[ DumpAllBProcesses ] Only root can call this method")
+	}
+
+	ref, err := core.NewRefFromBase58(refStr)
+	if err != nil {
+		return nil, fmt.Errorf("[ DumpAllBProcesses ] Failed to parse organization reference: %s", err.Error())
+	}
+	bProcessObject := organization.GetObject(*ref)
+
+	return organizationObject.GetMembers()
 }
 
 // CreateBProcess processes create business process request
