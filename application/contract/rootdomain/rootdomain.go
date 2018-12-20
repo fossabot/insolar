@@ -91,9 +91,6 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Failed to parse reference: %s", err.Error())
 	}
-	if err != nil {
-		return nil, err
-	}
 	if *ref != caller && caller != rd.RootMember {
 		return nil, fmt.Errorf("[ DumpUserInfo ] You can dump only yourself")
 	}
