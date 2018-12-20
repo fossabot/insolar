@@ -11,7 +11,7 @@ type DocPermission string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111GrwACkoL2WjNdi5tvuBqmcoPPsRjfHRXcQ4Vgw.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112xyq4EkuysCtSkxo8HLNrXr8izRgRzgoYcCa343.11111111111111111111111111111111")
 
 // StageTemplate holds proxy type
 type StageTemplate struct {

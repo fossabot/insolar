@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11116Uj676z8rSxZz2KMM7iJR1AcGcVYRLvbTy91q6.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11113E65hCXwxCucZjnbzKet4t3ujxf45VHqiiYFwJq.11111111111111111111111111111111")
 
 // ElemTemplate holds proxy type
 type ElemTemplate struct {

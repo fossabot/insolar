@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111YsEbSqD2EoJcor7bkLyiAHM9XYPNJdtwQC2u4H.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111aCxLx9EbgsZur5HDhQQBg5CLZLoEHBAYQTqmig.11111111111111111111111111111111")
 
 // Organization holds proxy type
 type Organization struct {
@@ -140,8 +140,8 @@ func (r *Organization) GetCode() (core.RecordRef, error) {
 	return r.Code, nil
 }
 
-// ToOut is proxy generated method
-func (r *Organization) ToOut() ([]byte, error) {
+// ToJSON is proxy generated method
+func (r *Organization) ToJSON() ([]byte, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -157,7 +157,7 @@ func (r *Organization) ToOut() ([]byte, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToOut", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToJSON", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -173,8 +173,8 @@ func (r *Organization) ToOut() ([]byte, error) {
 	return ret0, nil
 }
 
-// ToOutNoWait is proxy generated method
-func (r *Organization) ToOutNoWait() error {
+// ToJSONNoWait is proxy generated method
+func (r *Organization) ToJSONNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -184,7 +184,7 @@ func (r *Organization) ToOutNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToOut", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToJSON", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

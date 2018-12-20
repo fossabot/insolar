@@ -7,7 +7,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("111135ZHnoNMwVs8xY8N926jj5jpDxTUgujAYFtMzSy.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("111133s4rcw1Hr1Z1oMhRP5XQbuVFBZk87fdwZWdebc.11111111111111111111111111111111")
 
 // ConditionRouter holds proxy type
 type ConditionRouter struct {

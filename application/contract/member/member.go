@@ -34,11 +34,11 @@ type Member struct {
 	PublicKey string
 }
 
-func (m *Member) ToOut() ([]byte, error) {
+func (m *Member) ToJSON() ([]byte, error) {
 
 	memberJSON, err := json.Marshal(m)
 	if err != nil {
-		return nil, fmt.Errorf("[ ToOut ]: %s", err.Error())
+		return nil, fmt.Errorf("[ ToJSON ]: %s", err.Error())
 	}
 
 	return memberJSON, nil

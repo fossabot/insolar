@@ -19,13 +19,21 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/application/proxy/bprocess"
-	"github.com/insolar/insolar/application/proxy/doctype"
-	"github.com/insolar/insolar/application/proxy/elemtemplate"
+	bProcessContract "github.com/insolar/insolar/application/contract/bprocess"
+	docTypeContract "github.com/insolar/insolar/application/contract/doctype"
+	elementTemplateContract "github.com/insolar/insolar/application/contract/elemtemplate"
+	memberContract "github.com/insolar/insolar/application/contract/member"
+	organizationContract "github.com/insolar/insolar/application/contract/organization"
+	procTemplateContract "github.com/insolar/insolar/application/contract/proctemplate"
+	stageTemplateContract "github.com/insolar/insolar/application/contract/stagetemplate"
+	bProcessProxy "github.com/insolar/insolar/application/proxy/bprocess"
+	docTypeProxy "github.com/insolar/insolar/application/proxy/doctype"
+	elemTemplateProxy "github.com/insolar/insolar/application/proxy/elemtemplate"
 	"github.com/insolar/insolar/application/proxy/member"
-	"github.com/insolar/insolar/application/proxy/organization"
-	"github.com/insolar/insolar/application/proxy/proctemplate"
-	"github.com/insolar/insolar/application/proxy/stagetemplate"
+	memberProxy "github.com/insolar/insolar/application/proxy/member"
+	organizationProxy "github.com/insolar/insolar/application/proxy/organization"
+	procTemplateProxy "github.com/insolar/insolar/application/proxy/proctemplate"
+	stageTemplateProxy "github.com/insolar/insolar/application/proxy/stagetemplate"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -165,7 +173,7 @@ func (rd *RootDomain) CreateOrganization(name string, key string, requisites str
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ CreateOrganization ] Only Root member can create organization")
 	}
-	organizationHolder := organization.New(name, key, requisites)
+	organizationHolder := organizationProxy.New(name, key, requisites)
 	o, err := organizationHolder.AsChild(rd.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateOrganization ] Can't save as child: %s", err.Error())
@@ -174,32 +182,35 @@ func (rd *RootDomain) CreateOrganization(name string, key string, requisites str
 	return o.GetReference().String(), nil
 }
 
-// DumpAllOrganizations processes dump all users request
+// DumpAllOrganizations processes dump all organizations request
 func (rd *RootDomain) DumpAllOrganizations() ([]byte, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return nil, fmt.Errorf("[ DumpAllOrganizations ] Only root can call this method")
 	}
-	res := []map[string]interface{}{}
-	iterator, err := rd.NewChildrenTypedIterator(organization.GetPrototype())
+
+	iterator, err := rd.NewChildrenTypedIterator(organizationProxy.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpAllOrganizations ] Can't get children: %s", err.Error())
 	}
 
+	res := []organizationContract.Organization{}
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
 			return nil, fmt.Errorf("[ DumpAllOrganizations ] Can't get next child: %s", err.Error())
 		}
 
-		if cref == rd.RootMember {
-			continue
-		}
-		m := member.GetObject(cref)
-		userInfo, err := rd.getUserInfoMap(m)
+		o := organizationProxy.GetObject(cref)
+
+		organizationsJSON, err := o.ToJSON()
+
+		cOrganization := organizationContract.Organization{}
+		err = json.Unmarshal(organizationsJSON, &cOrganization)
 		if err != nil {
-			return nil, fmt.Errorf("[ DumpAllOrganizations ] Problem with making request: %s", err.Error())
+			return nil, fmt.Errorf("[ DumpAllOrganizations ] Problem with unmarshal organization from response: %s", err.Error())
 		}
-		res = append(res, userInfo)
+
+		res = append(res, cOrganization)
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON, nil
@@ -251,7 +262,7 @@ func (rd *RootDomain) DumpAllOrganizationMembers(refStr string) (resultJSON []by
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpAllOrganizationMembers ] Failed to parse organization reference: %s", err.Error())
 	}
-	organizationObject := organization.GetObject(*ref)
+	organizationObject := organizationProxy.GetObject(*ref)
 
 	return organizationObject.GetMembers()
 }
@@ -261,7 +272,7 @@ func (rd *RootDomain) CreateBProcess(name string) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ CreateOrganization ] Only Root member can create organization")
 	}
-	bProcessHolder := bprocess.New(name)
+	bProcessHolder := bProcessProxy.New(name)
 	bp, err := bProcessHolder.AsChild(rd.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateOrganization ] Can't save as child: %s", err.Error())
@@ -271,19 +282,37 @@ func (rd *RootDomain) CreateBProcess(name string) (string, error) {
 }
 
 // DumpAllBProcesses processes dump all bProcesses request
-func (rd *RootDomain) DumpAllBProcesses() (resultJSON []byte, err error) {
-
+func (rd *RootDomain) DumpAllBProcesses() ([]byte, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return nil, fmt.Errorf("[ DumpAllBProcesses ] Only root can call this method")
 	}
 
-	ref, err := core.NewRefFromBase58(refStr)
+	iterator, err := rd.NewChildrenTypedIterator(bProcessProxy.GetPrototype())
 	if err != nil {
-		return nil, fmt.Errorf("[ DumpAllBProcesses ] Failed to parse organization reference: %s", err.Error())
+		return nil, fmt.Errorf("[ DumpAllBProcesses ] Can't get children: %s", err.Error())
 	}
-	bProcessObject := organization.GetObject(*ref)
 
-	return organizationObject.GetMembers()
+	res := []bProcessContract.BProcess{}
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("[ DumpAllBProcesses ] Can't get next child: %s", err.Error())
+		}
+
+		proxyBProcess := bProcessProxy.GetObject(cref)
+
+		bProcessJSON, err := proxyBProcess.ToJSON()
+
+		contractBProcess := bProcessContract.BProcess{}
+		err = json.Unmarshal(bProcessJSON, &contractBProcess)
+		if err != nil {
+			return nil, fmt.Errorf("[ DumpAllBProcesses ] Problem with unmarshal organization from response: %s", err.Error())
+		}
+
+		res = append(res, contractBProcess)
+	}
+	resJSON, _ := json.Marshal(res)
+	return resJSON, nil
 }
 
 // CreateBProcess processes create business process request
@@ -295,7 +324,7 @@ func (rd *RootDomain) СreateProcTemplate(bProcessReferenceStr string, name stri
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
 	}
-	procTemplateHolder := proctemplate.New(name)
+	procTemplateHolder := procTemplateProxy.New(name)
 	pt, err := procTemplateHolder.AsChild(*bProcessReference)
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
@@ -305,7 +334,7 @@ func (rd *RootDomain) СreateProcTemplate(bProcessReferenceStr string, name stri
 }
 
 // CreateDocType processes create document type request
-func (rd *RootDomain) CreateDocType(bProcessReferenceStr string, name string, fields []doctype.Field, attachments []doctype.Attachment) (string, error) {
+func (rd *RootDomain) CreateDocType(bProcessReferenceStr string, name string, fields []docTypeProxy.Field, attachments []docTypeProxy.Attachment) (string, error) {
 	if *rd.GetContext().Caller != rd.RootMember {
 		return "", fmt.Errorf("[ CreateDocType ] Only Root member can create organization")
 	}
@@ -313,7 +342,7 @@ func (rd *RootDomain) CreateDocType(bProcessReferenceStr string, name string, fi
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
 	}
-	doctypeHolder := doctype.New(name, fields, attachments)
+	doctypeHolder := docTypeProxy.New(name, fields, attachments)
 	dt, err := doctypeHolder.AsChild(*bProcessReference)
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
@@ -332,7 +361,7 @@ func (rd *RootDomain) CreateStageTemplate(bProcessReferenceStr string, name stri
 		return "", fmt.Errorf("[ CreateDocType ] Failed to parse bprocess reference: %s", err.Error())
 	}
 
-	var previousElements [len(previousElementsRefs)]elemtemplate.ElemTemplate
+	var previousElements [len(previousElementsRefs)]elemTemplateProxy.ElemTemplate
 	for i, refStr := range previousElementsRefs {
 		previousElementRef, err := core.NewRefFromBase58(refStr)
 		if err != nil {
@@ -340,16 +369,16 @@ func (rd *RootDomain) CreateStageTemplate(bProcessReferenceStr string, name stri
 		}
 
 		//todo nextElement
-		previousElements[i] = *elemtemplate.GetObject(*previousElementRef)
+		previousElements[i] = *elemTemplateProxy.GetObject(*previousElementRef)
 	}
 
-	elemTemplateHolder := elemtemplate.New(name, previousElements[:])
+	elemTemplateHolder := elemTemplateProxy.New(name, previousElements[:])
 	et, err := elemTemplateHolder.AsChild(*bProcessReference)
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
 	}
 
-	stageTemplateHolderHolder := stagetemplate.New(name)
+	stageTemplateHolderHolder := stageTemplateProxy.New(name)
 	st, err := stageTemplateHolderHolder.AsChild(et.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())

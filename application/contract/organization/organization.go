@@ -17,11 +17,11 @@ type Organization struct {
 	Requisites string
 }
 
-func (o *Organization) ToOut() ([]byte, error) {
+func (o *Organization) ToJSON() ([]byte, error) {
 
 	memberJSON, err := json.Marshal(o)
 	if err != nil {
-		return nil, fmt.Errorf("[ ToOut ]: %s", err.Error())
+		return nil, fmt.Errorf("[ ToJSON ]: %s", err.Error())
 	}
 
 	return memberJSON, nil
@@ -88,7 +88,7 @@ func (o *Organization) GetMembers() (resultJSON []byte, err error) {
 
 		m := proxyMember.GetObject(cref)
 
-		memberJSON, err := m.ToOut()
+		memberJSON, err := m.ToJSON()
 		if err != nil {
 			return nil, fmt.Errorf("[ GetMembers ] Problem with making request: %s", err.Error())
 		}

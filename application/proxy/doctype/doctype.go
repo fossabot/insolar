@@ -6,14 +6,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type FieldType string
-type AttachmentType string
-type Field struct {
+type Attachment struct {
 	Name  string
 	Type  FieldType
 	Value []byte
 }
-type Attachment struct {
+type FieldType string
+type AttachmentType string
+type Field struct {
 	Name  string
 	Type  FieldType
 	Value []byte

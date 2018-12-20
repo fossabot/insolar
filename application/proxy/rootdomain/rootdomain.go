@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112FWAdxWLC8ZGs41puBscPvFZoVwWUnuBobK2dLD.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111yePYS5uU1sFqwp89jVb68DcicBqVVhFxbaU3Bu.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -513,6 +513,58 @@ func (r *RootDomain) CreateOrganizationNoWait(name string, key string, requisite
 	return nil
 }
 
+// DumpAllOrganizations is proxy generated method
+func (r *RootDomain) DumpAllOrganizations() ([]byte, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllOrganizations", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// DumpAllOrganizationsNoWait is proxy generated method
+func (r *RootDomain) DumpAllOrganizationsNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllOrganizations", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // AddMemberToOrganization is proxy generated method
 func (r *RootDomain) AddMemberToOrganization(memberReferenceStr string, organizationReferenceStr string) (string, error) {
 	var args [2]interface{}
@@ -570,9 +622,9 @@ func (r *RootDomain) AddMemberToOrganizationNoWait(memberReferenceStr string, or
 }
 
 // DumpAllOrganizationMembers is proxy generated method
-func (r *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string) ([]byte, error) {
+func (r *RootDomain) DumpAllOrganizationMembers(refStr string) ([]byte, error) {
 	var args [1]interface{}
-	args[0] = organizationReferenceStr
+	args[0] = refStr
 
 	var argsSerialized []byte
 
@@ -604,9 +656,9 @@ func (r *RootDomain) DumpAllOrganizationMembers(organizationReferenceStr string)
 }
 
 // DumpAllOrganizationMembersNoWait is proxy generated method
-func (r *RootDomain) DumpAllOrganizationMembersNoWait(organizationReferenceStr string) error {
+func (r *RootDomain) DumpAllOrganizationMembersNoWait(refStr string) error {
 	var args [1]interface{}
-	args[0] = organizationReferenceStr
+	args[0] = refStr
 
 	var argsSerialized []byte
 
@@ -670,6 +722,58 @@ func (r *RootDomain) CreateBProcessNoWait(name string) error {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateBProcess", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DumpAllBProcesses is proxy generated method
+func (r *RootDomain) DumpAllBProcesses() ([]byte, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllBProcesses", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// DumpAllBProcessesNoWait is proxy generated method
+func (r *RootDomain) DumpAllBProcessesNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllBProcesses", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
