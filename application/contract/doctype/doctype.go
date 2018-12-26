@@ -1,6 +1,8 @@
 package doctype
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -35,6 +37,16 @@ type DocType struct {
 	Name        string
 	Fields      []Field
 	Attachments []Attachment
+}
+
+func (docType *DocType) ToJSON() ([]byte, error) {
+
+	documentJSON, err := json.Marshal(docType)
+	if err != nil {
+		return nil, fmt.Errorf("[ ToJSON ]: %s", err.Error())
+	}
+
+	return documentJSON, nil
 }
 
 func New(name string, fields []Field, attachments []Attachment) (*DocType, error) {

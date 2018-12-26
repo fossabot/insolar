@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111gRfq7JWEXmn2d8g8RUYA5h7hmxcdWDsMedW3je.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112Lq4dgXfyf47ScgJ3yaQQPRMqd7PeJSH2NFzKjQ.11111111111111111111111111111111")
 
 // ProcTemplate holds proxy type
 type ProcTemplate struct {
@@ -136,4 +136,284 @@ func (r *ProcTemplate) GetCode() (core.RecordRef, error) {
 	}
 
 	return r.Code, nil
+}
+
+// ToJSON is proxy generated method
+func (r *ProcTemplate) ToJSON() ([]byte, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToJSON", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// ToJSONNoWait is proxy generated method
+func (r *ProcTemplate) ToJSONNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToJSON", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateDocument is proxy generated method
+func (r *ProcTemplate) CreateDocument(name string, docTypeReferenceStr string) (string, error) {
+	var args [2]interface{}
+	args[0] = name
+	args[1] = docTypeReferenceStr
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateDocument", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateDocumentNoWait is proxy generated method
+func (r *ProcTemplate) CreateDocumentNoWait(name string, docTypeReferenceStr string) error {
+	var args [2]interface{}
+	args[0] = name
+	args[1] = docTypeReferenceStr
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateDocument", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetDocuments is proxy generated method
+func (r *ProcTemplate) GetDocuments() ([]byte, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetDocuments", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetDocumentsNoWait is proxy generated method
+func (r *ProcTemplate) GetDocumentsNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetDocuments", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateStageTemplate is proxy generated method
+func (r *ProcTemplate) CreateStageTemplate(name string, previousElemTemplatesRefs []string, participantsRef string, expirationDate string) (string, error) {
+	var args [4]interface{}
+	args[0] = name
+	args[1] = previousElemTemplatesRefs
+	args[2] = participantsRef
+	args[3] = expirationDate
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateStageTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateStageTemplateNoWait is proxy generated method
+func (r *ProcTemplate) CreateStageTemplateNoWait(name string, previousElemTemplatesRefs []string, participantsRef string, expirationDate string) error {
+	var args [4]interface{}
+	args[0] = name
+	args[1] = previousElemTemplatesRefs
+	args[2] = participantsRef
+	args[3] = expirationDate
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateStageTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateConditionRouterTemplate is proxy generated method
+func (r *ProcTemplate) CreateConditionRouterTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccess []string, nextElementTemplateFail []string) (string, error) {
+	var args [4]interface{}
+	args[0] = name
+	args[1] = previousElemTemplatesRefs
+	args[2] = nextElementTemplateSuccess
+	args[3] = nextElementTemplateFail
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateConditionRouterTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateConditionRouterTemplateNoWait is proxy generated method
+func (r *ProcTemplate) CreateConditionRouterTemplateNoWait(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccess []string, nextElementTemplateFail []string) error {
+	var args [4]interface{}
+	args[0] = name
+	args[1] = previousElemTemplatesRefs
+	args[2] = nextElementTemplateSuccess
+	args[3] = nextElementTemplateFail
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateConditionRouterTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

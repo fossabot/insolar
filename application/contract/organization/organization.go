@@ -3,9 +3,8 @@ package organization
 import (
 	"encoding/json"
 	"fmt"
-	contractMember "github.com/insolar/insolar/application/contract/member"
-	"github.com/insolar/insolar/application/proxy/allowance"
-	proxyMember "github.com/insolar/insolar/application/proxy/member"
+	memberContract "github.com/insolar/insolar/application/contract/member"
+	memberProxy "github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -17,9 +16,9 @@ type Organization struct {
 	Requisites string
 }
 
-func (o *Organization) ToJSON() ([]byte, error) {
+func (organization *Organization) ToJSON() ([]byte, error) {
 
-	memberJSON, err := json.Marshal(o)
+	memberJSON, err := json.Marshal(organization)
 	if err != nil {
 		return nil, fmt.Errorf("[ ToJSON ]: %s", err.Error())
 	}
@@ -35,26 +34,26 @@ func New(name string, key string, requisites string) (*Organization, error) {
 	}, nil
 }
 
-func (o *Organization) GetName() (string, error) {
-	return o.Name, nil
+func (organization *Organization) GetName() (string, error) {
+	return organization.Name, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
-func (o *Organization) GetPublicKey() (string, error) {
-	return o.PublicKey, nil
+func (organization *Organization) GetPublicKey() (string, error) {
+	return organization.PublicKey, nil
 }
 
-func (o *Organization) GetRequisites() (string, error) {
-	return o.Requisites, nil
+func (organization *Organization) GetRequisites() (string, error) {
+	return organization.Requisites, nil
 }
 
-func (o *Organization) VerifySig(method string, params []byte, seed []byte, sign []byte) error {
-	args, err := core.MarshalArgs(o.GetReference(), method, params, seed)
+func (organization *Organization) VerifySig(method string, params []byte, seed []byte, sign []byte) error {
+	args, err := core.MarshalArgs(organization.GetReference(), method, params, seed)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
 	}
-	key, err := o.GetPublicKey()
+	key, err := organization.GetPublicKey()
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
@@ -71,35 +70,67 @@ func (o *Organization) VerifySig(method string, params []byte, seed []byte, sign
 	return nil
 }
 
-// DumpAllOrganizationMembers processes dump all organization members
-func (o *Organization) GetMembers() (resultJSON []byte, err error) {
+// AddMemberToOrganization processes add member to organization
+func (organization *Organization) AddMember(memberReferenceStr string, organizationReferenceStr string) (string, error) {
 
-	iterator, err := o.NewChildrenTypedIterator(allowance.GetPrototype())
+	memberReference, err := core.NewRefFromBase58(memberReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Failed to parse member reference: %s", err.Error())
+	}
+	organizationReference, err := core.NewRefFromBase58(organizationReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Failed to parse organization reference: %s", err.Error())
+	}
+
+	memberObject := memberProxy.GetObject(*memberReference)
+
+	name, err := memberObject.GetName()
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get name : %s", err.Error())
+	}
+	key, err := memberObject.GetPublicKey()
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get key : %s", err.Error())
+	}
+
+	memberHolder := memberProxy.New(name, key)
+	m, err := memberHolder.AsChild(*organizationReference)
+	if err != nil {
+		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't save as child: %s", err.Error())
+	}
+
+	return m.GetReference().String(), nil
+}
+
+// DumpAllOrganizationMembers processes dump all organization members
+func (organization *Organization) GetMembers() (resultJSON []byte, err error) {
+
+	iterator, err := organization.NewChildrenTypedIterator(memberProxy.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ GetMembers ] Can't get children: %s", err.Error())
 	}
 
-	res := []contractMember.Member{}
+	res := []memberContract.Member{}
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
 			return nil, fmt.Errorf("[ GetMembers ] Can't get next child: %s", err.Error())
 		}
 
-		m := proxyMember.GetObject(cref)
+		memberProxyObject := memberProxy.GetObject(cref)
 
-		memberJSON, err := m.ToJSON()
+		memberJSON, err := memberProxyObject.ToJSON()
 		if err != nil {
 			return nil, fmt.Errorf("[ GetMembers ] Problem with making request: %s", err.Error())
 		}
 
-		cMember := contractMember.Member{}
-		err = json.Unmarshal(memberJSON, &cMember)
+		memberContractObject := memberContract.Member{}
+		err = json.Unmarshal(memberJSON, &memberContractObject)
 		if err != nil {
 			return nil, fmt.Errorf("[ GetMembers ] Problem with unmarshal member from response: %s", err.Error())
 		}
 
-		res = append(res, cMember)
+		res = append(res, memberContractObject)
 	}
 
 	resultJSON, err = json.Marshal(res)

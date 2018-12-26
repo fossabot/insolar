@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111aCxLx9EbgsZur5HDhQQBg5CLZLoEHBAYQTqmig.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112cCUQ32vbzE5x7BpeDVkjWZh1r8D3zoXLNE1gyi.11111111111111111111111111111111")
 
 // Organization holds proxy type
 type Organization struct {
@@ -399,6 +399,62 @@ func (r *Organization) VerifySigNoWait(method string, params []byte, seed []byte
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "VerifySig", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddMember is proxy generated method
+func (r *Organization) AddMember(memberReferenceStr string, organizationReferenceStr string) (string, error) {
+	var args [2]interface{}
+	args[0] = memberReferenceStr
+	args[1] = organizationReferenceStr
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AddMember", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// AddMemberNoWait is proxy generated method
+func (r *Organization) AddMemberNoWait(memberReferenceStr string, organizationReferenceStr string) error {
+	var args [2]interface{}
+	args[0] = memberReferenceStr
+	args[1] = organizationReferenceStr
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "AddMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

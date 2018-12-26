@@ -6,11 +6,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type Attachment struct {
-	Name  string
-	Type  FieldType
-	Value []byte
-}
 type FieldType string
 type AttachmentType string
 type Field struct {
@@ -18,10 +13,15 @@ type Field struct {
 	Type  FieldType
 	Value []byte
 }
+type Attachment struct {
+	Name  string
+	Type  FieldType
+	Value []byte
+}
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112vv1r6aAEwNhEv9cQ5vgaACh2kQQ655U5aG7qzu.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112mCiX8arNapHRj3DtLVKQEU8GMyR4ddkCs7Lntz.11111111111111111111111111111111")
 
 // DocType holds proxy type
 type DocType struct {
@@ -151,4 +151,56 @@ func (r *DocType) GetCode() (core.RecordRef, error) {
 	}
 
 	return r.Code, nil
+}
+
+// ToJSON is proxy generated method
+func (r *DocType) ToJSON() ([]byte, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ToJSON", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// ToJSONNoWait is proxy generated method
+func (r *DocType) ToJSONNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ToJSON", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

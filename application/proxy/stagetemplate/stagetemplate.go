@@ -1,17 +1,17 @@
 package stagetemplate
 
 import (
-	"github.com/insolar/insolar/application/contract/response"
+	"github.com/insolar/insolar/application/proxy/participant"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type DocPermission string
+type AccessModificator string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112xyq4EkuysCtSkxo8HLNrXr8izRgRzgoYcCa343.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11113KKbSMysT9P8QqJc6fGDzjG7eYb9vdrzKydMrfb.11111111111111111111111111111111")
 
 // StageTemplate holds proxy type
 type StageTemplate struct {
@@ -64,13 +64,10 @@ func GetImplementationFrom(object core.RecordRef) (*StageTemplate, error) {
 }
 
 // New is constructor
-func New(name string, participants []participant.Participant, docsPermissions [][]DocPermission, response response.Response, expirationDate string) *ContractConstructorHolder {
-	var args [5]interface{}
-	args[0] = name
-	args[1] = participants
-	args[2] = docsPermissions
-	args[3] = response
-	args[4] = expirationDate
+func New(participant participant.Participant, expirationDate string) *ContractConstructorHolder {
+	var args [2]interface{}
+	args[0] = participant
+	args[1] = expirationDate
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)

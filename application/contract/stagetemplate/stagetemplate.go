@@ -1,39 +1,58 @@
 package stagetemplate
 
 import (
-	"github.com/insolar/insolar/application/contract/elemtemplate"
-	"github.com/insolar/insolar/application/contract/participant"
-	"github.com/insolar/insolar/application/contract/response"
+	"fmt"
+	documentProxy "github.com/insolar/insolar/application/proxy/document"
+	"github.com/insolar/insolar/application/proxy/participant"
+	"github.com/insolar/insolar/application/proxy/response"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-type DocPermission string
+type AccessModificator string
 
 const (
-	RWType DocPermission = "Read/Write"
-	WType  DocPermission = "Write"
-	RType  DocPermission = "Read"
-	NType  DocPermission = "None"
+	RWType AccessModificator = "Read/Write"
+	WType  AccessModificator = "Write"
+	RType  AccessModificator = "Read"
+	NType  AccessModificator = "None"
 )
 
 type StageTemplate struct {
 	foundation.BaseContract
-	elemtemplate.ElemTemplate
-	Participants    []participant.Participant
-	DocsPermissions [][]DocPermission
+	Participant     participant.Participant
+	DocsPermissions map[documentProxy.Document]AccessModificator
 	Response        response.Response
 	ExpirationDate  string
 }
 
-func New(name string, participants []participant.Participant, docsPermissions [][]DocPermission, response response.Response, expirationDate string) (*StageTemplate, error) {
+func New(participant participant.Participant, expirationDate string) (*StageTemplate, error) {
 	return &StageTemplate{
-		foundation.BaseContract{},
-		elemtemplate.ElemTemplate{
-			Name: name,
-		},
-		participants,
-		docsPermissions,
-		response,
-		expirationDate,
+		Participant:    participant,
+		ExpirationDate: expirationDate,
 	}, nil
+}
+
+func (stageTemplate *StageTemplate) setDocsPermissions(docsPermissionStrs map[string]string) error {
+	docsPermissions := make(map[documentProxy.Document]AccessModificator)
+
+	for documentReferenceStr, accessModificatorStr := range docsPermissionStrs {
+
+		documentReference, err := core.NewRefFromBase58(documentReferenceStr)
+		if err != nil {
+			return fmt.Errorf("[ setDocsPermissions ] Failed to parse reference: %s", err.Error())
+		}
+
+		documentObject := documentProxy.GetObject(*documentReference)
+
+		accessModificator := AccessModificator(accessModificatorStr)
+
+		if accessModificator == "" {
+			return fmt.Errorf("[ setDocsPermissions ] Failed to parse access Modificator: %s", err.Error())
+		}
+
+		docsPermissions[*documentObject] = accessModificator
+	}
+
+	stageTemplate.DocsPermissions = docsPermissions
 }
