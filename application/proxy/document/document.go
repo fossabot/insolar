@@ -9,7 +9,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11113W1t7CEuUK7aSThV66HFgtCFBwqhU21zgjpHHQH.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112GhK1kuBJQF6tvwdg3ZauBDTi5CnThoTmbvQRKr.11111111111111111111111111111111")
 
 // Document holds proxy type
 type Document struct {

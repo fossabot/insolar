@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112Lq4dgXfyf47ScgJ3yaQQPRMqd7PeJSH2NFzKjQ.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11113K9JF912tAiJoYotJ2Y1QVK9hqqDjFAgWPED1qh.11111111111111111111111111111111")
 
 // ProcTemplate holds proxy type
 type ProcTemplate struct {
@@ -299,12 +299,14 @@ func (r *ProcTemplate) GetDocumentsNoWait() error {
 }
 
 // CreateStageTemplate is proxy generated method
-func (r *ProcTemplate) CreateStageTemplate(name string, previousElemTemplatesRefs []string, participantsRef string, expirationDate string) (string, error) {
-	var args [4]interface{}
+func (r *ProcTemplate) CreateStageTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string, participantsRef string, expirationDate string) (string, error) {
+	var args [6]interface{}
 	args[0] = name
 	args[1] = previousElemTemplatesRefs
-	args[2] = participantsRef
-	args[3] = expirationDate
+	args[2] = nextElementTemplateSuccessRefs
+	args[3] = nextElementTemplateFailRefs
+	args[4] = participantsRef
+	args[5] = expirationDate
 
 	var argsSerialized []byte
 
@@ -336,12 +338,14 @@ func (r *ProcTemplate) CreateStageTemplate(name string, previousElemTemplatesRef
 }
 
 // CreateStageTemplateNoWait is proxy generated method
-func (r *ProcTemplate) CreateStageTemplateNoWait(name string, previousElemTemplatesRefs []string, participantsRef string, expirationDate string) error {
-	var args [4]interface{}
+func (r *ProcTemplate) CreateStageTemplateNoWait(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string, participantsRef string, expirationDate string) error {
+	var args [6]interface{}
 	args[0] = name
 	args[1] = previousElemTemplatesRefs
-	args[2] = participantsRef
-	args[3] = expirationDate
+	args[2] = nextElementTemplateSuccessRefs
+	args[3] = nextElementTemplateFailRefs
+	args[4] = participantsRef
+	args[5] = expirationDate
 
 	var argsSerialized []byte
 

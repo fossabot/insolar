@@ -10,18 +10,38 @@ import (
 type ElemTemplate struct {
 	foundation.BaseContract
 	Name                       string
-	PreviousElements           []ElemTemplate
-	NextElementTemplateSuccess []ElemTemplate
-	NextElementTemplateFail    []ElemTemplate
+	PreviousElements           []elemTemplateProxy.ElemTemplate
+	NextElementTemplateSuccess []elemTemplateProxy.ElemTemplate
+	NextElementTemplateFail    []elemTemplateProxy.ElemTemplate
 }
 
-func New(name string, previousElements []ElemTemplate, nextElementTemplateSuccess []ElemTemplate, nextElementTemplateFail []ElemTemplate) (*ElemTemplate, error) {
+func New(name string, previousElements []elemTemplateProxy.ElemTemplate, nextElementTemplateSuccess []elemTemplateProxy.ElemTemplate, nextElementTemplateFail []elemTemplateProxy.ElemTemplate) (*ElemTemplate, error) {
 	return &ElemTemplate{
 		Name:                       name,
 		PreviousElements:           previousElements,
 		NextElementTemplateSuccess: nextElementTemplateSuccess,
 		NextElementTemplateFail:    nextElementTemplateFail,
 	}, nil
+}
+
+func NewFromRefs(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string) (*ElemTemplate, error) {
+
+	previousElemTemplates, err := GetElemTemplatesByRefStrs(previousElemTemplatesRefs)
+	if err != nil {
+		return nil, err
+	}
+
+	nextElementTemplateSuccess, err := GetElemTemplatesByRefStrs(nextElementTemplateSuccessRefs)
+	if err != nil {
+		return nil, err
+	}
+
+	nextElementTemplateFail, err := GetElemTemplatesByRefStrs(nextElementTemplateFailRefs)
+	if err != nil {
+		return nil, err
+	}
+
+	return New(name, previousElemTemplates[:], nextElementTemplateSuccess[:], nextElementTemplateFail[:])
 }
 
 func GetElemTemplatesByRefStrs(refStrs []string) ([]elemTemplateProxy.ElemTemplate, error) {
