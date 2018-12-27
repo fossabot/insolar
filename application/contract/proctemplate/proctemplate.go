@@ -145,7 +145,7 @@ func (procTemplate *ProcTemplate) CreateConditionRouterTemplate(name string,
 		return "", fmt.Errorf("[ CreateConditionRouterTemplate ] Can't save as child: %s", err.Error())
 	}
 
-	conditionObject := condition.Condition{}
+	var conditionObject condition.Condition
 
 	json.Unmarshal(conditionJSON, &conditionObject)
 
