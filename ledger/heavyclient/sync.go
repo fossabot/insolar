@@ -35,32 +35,30 @@ func (c *JetClient) HeavySync(
 ) error {
 	inslog := inslogger.FromContext(ctx)
 	jetID := c.jetID
+	inslog = inslog.WithField("jetID", jetID).WithField("pulseNum", pn)
 
-	current, err := c.PulseStorage.Current(ctx)
-	if err != nil {
-		return err
-	}
-
+	inslog.Debug("JetClient.HeavySync")
 	var (
 		busreply core.Reply
 		buserr   error
 	)
 
 	if retry {
-		inslog.Infof("send reset message for pulse %v (retry sync)", pn)
+		inslog.Info("synchronize: send reset message (retry sync)")
 		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if busreply, buserr := c.Bus.Send(ctx, resetMsg, *current, nil); buserr != nil {
+		if busreply, buserr = c.Bus.Send(ctx, resetMsg, nil); buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
 	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	busreply, buserr = c.Bus.Send(ctx, signalMsg, *current, nil)
+	busreply, buserr = c.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
 	if buserr != nil {
+		inslog.Error("synchronize: start send error", buserr.Error())
 		return HeavyErr{reply: busreply, err: buserr}
 	}
-	inslog.Infof("synchronize, sucessfully send start message for pulse %v", pn)
+	inslog.Debug("synchronize: sucessfully send start message")
 
 	replicator := storage.NewReplicaIter(
 		ctx, c.db, jetID, pn, pn+1, c.opts.SyncMessageLimit)
@@ -72,22 +70,27 @@ func (c *JetClient) HeavySync(
 		if err != nil {
 			panic(err)
 		}
-		msg := &message.HeavyPayload{Records: recs}
-		busreply, buserr = c.Bus.Send(ctx, msg, *current, nil)
+		msg := &message.HeavyPayload{
+			PulseNum: pn,
+			Records:  recs,
+		}
+		busreply, buserr = c.Bus.Send(ctx, msg, nil)
 		if buserr != nil {
+			inslog.Error("synchronize: payload send error", buserr.Error())
 			return HeavyErr{reply: busreply, err: buserr}
 		}
+		inslog.Debug("synchronize: sucessfully send save message")
 	}
 
 	signalMsg.Finished = true
-	busreply, buserr = c.Bus.Send(ctx, signalMsg, *current, nil)
+	busreply, buserr = c.Bus.Send(ctx, signalMsg, nil)
 	if buserr != nil {
+		inslog.Error("synchronize: finish send error", buserr.Error())
 		return HeavyErr{reply: busreply, err: buserr}
 	}
-	inslog.Infof("synchronize, sucessfully send finish message for pulse %v", pn)
+	inslog.Debug("synchronize: sucessfully send finish message")
 
-	lastMeetPulse := replicator.LastPulse()
-	inslog.Infof("synchronize on %v finised (maximum record pulse is %v)",
-		pn, lastMeetPulse)
+	lastMeetPulse := replicator.LastSeenPulse()
+	inslog.Debugf("synchronize: finished (maximum pulse of saved messages is %v)", lastMeetPulse)
 	return nil
 }

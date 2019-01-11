@@ -1,25 +1,24 @@
 /*
-*    Copyright 2018 Insolar
-*
-*    Licensed under the Apache License, Version 2.0 (the "License");
-*    you may not use this file except in compliance with the License.
-*    You may obtain a copy of the License at
-*
-*        http://www.apache.org/licenses/LICENSE-2.0
-*
-*    Unless required by applicable law or agreed to in writing, software
-*    distributed under the License is distributed on an "AS IS" BASIS,
-*    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*    See the License for the specific language governing permissions and
-*    limitations under the License.
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
  */
 
 package member
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/application/contract/doctype"
+
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
@@ -85,6 +84,8 @@ func (m *Member) VerifySig(method string, params []byte, seed []byte, sign []byt
 	return nil
 }
 
+var INSATTR_Call_API = true
+
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
@@ -120,6 +121,9 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return m.createProcTemplate(rootDomain, params)
 	case "createDocumentType":
 		return m.createDocTypeCall(rootDomain, params)
+		return m.registerNodeCall(rootDomain, params)
+	case "GetNodeRef":
+		return m.getNodeRef(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -161,13 +165,10 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
-	var amount float64
+	var amount uint
 	var toStr string
 	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
-	}
-	if amount <= 0 {
-		return nil, fmt.Errorf("[ transferCall ] Amount must be positive")
 	}
 	to, err := core.NewRefFromBase58(toStr)
 	if err != nil {
@@ -181,7 +182,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Can't get implementation: %s", err.Error())
 	}
 
-	return nil, w.Transfer(uint(amount), to)
+	return nil, w.Transfer(amount, to)
 }
 
 func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {
@@ -198,7 +199,7 @@ func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
 	return rootDomain.DumpAllUsers()
 }
 
-func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
 	var role string
 	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
@@ -218,6 +219,27 @@ func (m *Member) RegisterNodeCall(ref core.RecordRef, params []byte) (interface{
 	}
 
 	return string(cert), nil
+}
+
+func (m *Member) getNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
+	var publicKey string
+	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Can't unmarshal params: %s", err.Error())
+	}
+
+	rootDomain := rootdomain.GetObject(ref)
+	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Can't get nodeDmainRef: %s", err.Error())
+	}
+
+	nd := nodedomain.GetObject(nodeDomainRef)
+	nodeRef, err := nd.GetNodeRefByPK(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Node not found: %s", err.Error())
+	}
+
+	return nodeRef, nil
 }
 
 func (m *Member) createOrganizationCall(ref core.RecordRef, params []byte) (interface{}, error) {

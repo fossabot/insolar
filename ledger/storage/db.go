@@ -59,6 +59,8 @@ type DB struct {
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
+	// dropLock protects dropWG from concurrent calls to Add and Wait
+	dropLock sync.Mutex
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
 
@@ -74,12 +76,12 @@ type DB struct {
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 	// for past pulses to locate data.
 	// It should only contain previous N pulses. It should be stored on disk.
-	nodeHistory     map[core.PulseNumber][]core.Node
-	nodeHistoryLock sync.Mutex
+	nodeHistory     map[core.PulseNumber][]Node
+	nodeHistoryLock sync.RWMutex
 
 	addJetLock       sync.RWMutex
 	addBlockSizeLock sync.RWMutex
-	jetTreeLock      sync.Mutex
+	jetTreeLock      sync.RWMutex
 
 	closeLock sync.RWMutex
 	isClosed  bool
@@ -127,7 +129,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 		txretiries:           conf.Storage.TxRetriesOnConflict,
 		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
-		nodeHistory:          map[core.PulseNumber][]core.Node{},
+		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil
 }
@@ -339,7 +341,9 @@ func (db *DB) RemoveObjectIndex(
 }
 
 func (db *DB) waitinflight() {
+	db.dropLock.Lock()
 	db.dropWG.Wait()
+	db.dropLock.Unlock()
 }
 
 // BeginTransaction opens a new transaction.
@@ -353,7 +357,9 @@ func (db *DB) BeginTransaction(update bool) (*TransactionManager, error) {
 	}
 
 	if update {
+		db.dropLock.Lock()
 		db.dropWG.Add(1)
+		db.dropLock.Unlock()
 	}
 	return &TransactionManager{
 		db:        db,
@@ -465,8 +471,8 @@ func (db *DB) IterateLocalData(
 	return db.iterate(ctx, fullPrefix, handler)
 }
 
-// IterateRecords iterates over records.
-func (db *DB) IterateRecords(
+// IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
+func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
@@ -485,28 +491,79 @@ func (db *DB) IterateRecords(
 	})
 }
 
+// IterateIndexIDs iterates over index IDs on provided Jet ID.
+func (db *DB) IterateIndexIDs(
+	ctx context.Context,
+	jetID core.RecordID,
+	handler func(id core.RecordID) error,
+) error {
+	prefix := prefixkey(scopeIDLifeline, jetID[:])
+
+	return db.iterate(ctx, prefix, func(k, v []byte) error {
+		pn := pulseNumFromKey(0, k)
+		id := core.NewRecordID(pn, k[core.PulseNumberSize:])
+		err := handler(*id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // SetActiveNodes saves active nodes for pulse in memory.
 func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
 	db.nodeHistoryLock.Lock()
 	defer db.nodeHistoryLock.Unlock()
 
 	if _, ok := db.nodeHistory[pulse]; ok {
-		return errors.New("node history override is forbidden")
+		return ErrOverride
 	}
 
-	db.nodeHistory[pulse] = nodes
+	db.nodeHistory[pulse] = []Node{}
+	for _, n := range nodes {
+		db.nodeHistory[pulse] = append(db.nodeHistory[pulse], Node{
+			FID:   n.ID(),
+			FRole: n.Role(),
+		})
+	}
 
 	return nil
 }
 
 // GetActiveNodes return active nodes for specified pulse.
 func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	db.nodeHistoryLock.RLock()
+	defer db.nodeHistoryLock.RUnlock()
+
 	nodes, ok := db.nodeHistory[pulse]
 	if !ok {
 		return nil, errors.New("no nodes for this pulse")
 	}
+	res := make([]core.Node, 0, len(nodes))
+	for _, n := range nodes {
+		res = append(res, n)
+	}
 
-	return nodes, nil
+	return res, nil
+}
+
+// GetActiveNodesByRole return active nodes for specified pulse and role.
+func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+	db.nodeHistoryLock.RLock()
+	defer db.nodeHistoryLock.RUnlock()
+
+	nodes, ok := db.nodeHistory[pulse]
+	if !ok {
+		return nil, errors.New("no nodes for this pulse")
+	}
+	var inRole []core.Node
+	for _, n := range nodes {
+		if n.Role() == role {
+			inRole = append(inRole, n)
+		}
+	}
+
+	return inRole, nil
 }
 
 // StoreKeyValues stores provided key/value pairs.

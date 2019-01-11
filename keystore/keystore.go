@@ -44,13 +44,56 @@ func (ks *keyStore) Start(ctx context.Context) error {
 	return nil
 }
 
+type cachedKeyStore struct {
+	keyStore core.KeyStore
+
+	privateKey crypto.PrivateKey
+}
+
+func (ks *cachedKeyStore) getCachedPrivateKey(identifier string) crypto.PublicKey {
+	if ks.privateKey != nil {
+		return ks.privateKey
+	}
+	return nil
+}
+
+func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, error) {
+	privateKey, err := ks.keyStore.GetPrivateKey(identifier)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ loadPrivateKey ] Can't GetPrivateKey")
+	}
+
+	ks.privateKey = privateKey
+	return privateKey, nil
+}
+
+func (ks *cachedKeyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
+	privateKey := ks.getCachedPrivateKey(identifier)
+
+	return privateKey, nil
+}
+
+func (ks *cachedKeyStore) Start(ctx context.Context) error {
+	// TODO: ugly hack; do proper checks
+	if _, err := ks.loadPrivateKey(""); err != nil {
+		return errors.Wrap(err, "[ Start ] Failed to start keyStore")
+	}
+
+	return nil
+}
+
 func NewKeyStore(path string) (core.KeyStore, error) {
 	keyStore := &keyStore{
 		path: path,
 	}
 
+	cachedKeyStore := &cachedKeyStore{
+		keyStore: keyStore,
+	}
+
 	manager := component.Manager{}
 	manager.Inject(
+		cachedKeyStore,
 		keyStore,
 		privatekey.NewLoader(),
 	)
@@ -59,5 +102,5 @@ func NewKeyStore(path string) (core.KeyStore, error) {
 		return nil, errors.Wrap(err, "[ NewKeyStore ] Failed to create keyStore")
 	}
 
-	return keyStore, nil
+	return cachedKeyStore, nil
 }

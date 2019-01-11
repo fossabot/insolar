@@ -33,11 +33,11 @@ import (
 )
 
 type CaseRequest struct {
-	Message    core.Message
+	Parcel     core.Parcel
 	Request    core.RecordRef
 	MessageBus core.MessageBus
 	Reply      core.Reply
-	Error      error
+	Error      string
 }
 
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
@@ -59,7 +59,7 @@ func NewCaseBindFromValidateMessage(ctx context.Context, mb core.MessageBus, msg
 			panic("couldn't read tape: " + err.Error())
 		}
 		res.Requests[i] = CaseRequest{
-			Message:    req.Message,
+			Parcel:     req.Parcel,
 			Request:    req.Request,
 			MessageBus: mb,
 			Reply:      req.Reply,
@@ -81,15 +81,15 @@ func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBin
 	requests := make([]message.CaseBindRequest, len(cb.Requests))
 
 	for i, req := range cb.Requests {
-		var tape bytes.Buffer
-		err := req.MessageBus.WriteTape(ctx, &tape)
+		var buf bytes.Buffer
+		err := req.MessageBus.(core.TapeWriter).WriteTape(ctx, &buf)
 		if err != nil {
 			panic("couldn't write tape: " + err.Error())
 		}
 		requests[i] = message.CaseBindRequest{
-			Message:        req.Message,
+			Parcel:         req.Parcel,
 			Request:        req.Request,
-			MessageBusTape: tape.Bytes(),
+			MessageBusTape: buf.Bytes(),
 			Reply:          req.Reply,
 			Error:          req.Error,
 		}
@@ -107,20 +107,9 @@ func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.P
 	return res
 }
 
-func (cb *CaseBind) ToExecutorResultsMessage(ctx context.Context, ref Ref, pending bool, queue []message.ExecutionQueueElement) *message.ExecutorResults {
-	res := &message.ExecutorResults{
-		RecordRef: ref,
-		Pending:   pending,
-		Requests:  cb.getCaseBindForMessage(ctx),
-		Queue:     queue,
-	}
-
-	return res
-}
-
-func (cb *CaseBind) NewRequest(msg core.Message, request Ref, mb core.MessageBus) *CaseRequest {
+func (cb *CaseBind) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) *CaseRequest {
 	res := CaseRequest{
-		Message:    msg,
+		Parcel:     p,
 		Request:    request,
 		MessageBus: mb,
 	}
@@ -153,14 +142,6 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 	return &r.CaseBind.Requests[r.Request]
 }
 
-func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byte {
-	s, err := core.Serialize(in)
-	if err != nil {
-		panic("Can't marshal: " + err.Error())
-	}
-	return scheme.IntegrityHasher().Hash(s)
-}
-
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb CaseBind) (int, error) {
 	os := lr.UpsertObjectState(ref)
 	vs := os.StartValidation()
@@ -181,25 +162,25 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 			break
 		}
 
-		msg := request.Message
-		parcel, err := lr.ParcelFactory.Create(ctx, msg, ref, nil, *core.GenesisPulse)
-		if err != nil {
-			return 0, errors.New("failed to create a parcel")
-		}
-
 		traceID := "TODO" // FIXME
 
 		ctx = inslogger.ContextWithTrace(ctx, traceID)
 		ctx = core.ContextWithMessageBus(ctx, request.MessageBus)
 
+		sender := request.Parcel.GetSender()
 		vs.Current = &CurrentExecution{
-			Context: ctx,
-			Request: &request.Request,
+			Context:       ctx,
+			Request:       &request.Request,
+			RequesterNode: &sender,
 		}
 
-		reply, err := lr.executeOrValidate(ctx, vs, parcel)
+		rep, err := func() (core.Reply, error) {
+			vs.Unlock()
+			defer vs.Lock()
+			return lr.executeOrValidate(ctx, vs, request.Parcel)
+		}()
 
-		err = vs.Behaviour.Result(reply, err)
+		err = vs.Behaviour.Result(rep, err)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -207,7 +188,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 	return 1, nil
 }
 
-func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -215,7 +196,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 
 	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualValidator)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't play role")
+		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
 
 	passedStepsCount, validationError := lr.Validate(
@@ -226,28 +207,19 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		errstr = validationError.Error()
 	}
 
-	currentSlotPulse, err := lr.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-	_, err = lr.MessageBus.Send(
-		ctx,
-		&message.ValidationResults{
-			RecordRef:        msg.GetReference(),
-			PassedStepsCount: passedStepsCount,
-			Error:            errstr,
-		},
-		*currentSlotPulse,
-		nil,
-	)
+	_, err = lr.MessageBus.Send(ctx, &message.ValidationResults{
+		RecordRef:        msg.GetReference(),
+		PassedStepsCount: passedStepsCount,
+		Error:            errstr,
+	}, nil)
 
 	return &reply.OK{}, err
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
-		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
 	}
 
 	c := lr.GetConsensus(ctx, msg.RecordRef)
@@ -257,13 +229,13 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
-		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
 	}
 
-	// now we have 2 different types of data in message.ExecutorResults
+	// now we have 2 different types of data in message.HandleExecutorResultsMessage
 	// one part of it is about consensus
 	// another one is about prepare state on new executor after pulse
 	// TODO make it in different goroutines
@@ -275,8 +247,8 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	}
 
 	// validation things
-	c := lr.GetConsensus(ctx, msg.RecordRef)
-	c.AddExecutor(ctx, inmsg, msg)
+	// c := lr.GetConsensus(ctx, msg.RecordRef)
+	// c.AddExecutor(ctx, inmsg, msg)
 
 	return &reply.OK{}, nil
 }
@@ -297,8 +269,8 @@ func (vb *ValidationSaver) Mode() string {
 	return "execution"
 }
 
-func (vb *ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.MessageBus) {
-	vb.current = vb.caseBind.NewRequest(msg, request, mb)
+func (vb *ValidationSaver) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) {
+	vb.current = vb.caseBind.NewRequest(p, request, mb)
 }
 
 func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
@@ -306,7 +278,9 @@ func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
 		return errors.New("result call without request registered")
 	}
 	vb.current.Reply = reply
-	vb.current.Error = err
+	if err != nil {
+		vb.current.Error = err.Error()
+	}
 	return nil
 }
 

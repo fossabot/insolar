@@ -75,8 +75,12 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
+	pulseStorage := storage.NewPulseStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 	mb := testmessagebus.NewTestMessageBus(t)
+	mb.PulseStorage = pulseStorage
 	db.PlatformCryptographyScheme = scheme
 	handler := MessageHandler{
 		db:                         db,
@@ -97,8 +101,6 @@ func getTestData(t *testing.T) (
 	}
 
 	handler.RecentStorageProvider = provideMock
-
-	jc.AmIMock.Return(true, nil)
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
@@ -135,7 +137,7 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	codeRef := testutils.RandomRef()
 
 	mb := testutils.NewMessageBusMock(t)
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 core.Message, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		return &reply.Code{
 			Code: code,
 		}, nil
@@ -156,7 +158,7 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, code, receivedCode)
 
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 core.Message, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		t.Fatal("Func must not be called here")
 		return nil, nil
 	}
@@ -447,7 +449,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 
 		switch m.(type) {
@@ -624,7 +626,7 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
 			return &reply.GetChildrenRedirect{
@@ -660,18 +662,13 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 
 	jetID := *jet.NewID(0, nil)
 
-	rep, err := am.DefaultBus.Send(
-		ctx,
-		&message.JetDrop{
-			JetID: jetID,
-			Messages: [][]byte{
-				message.ToBytes(&setRecordMessage),
-			},
-			PulseNumber: core.GenesisPulse.PulseNumber,
+	rep, err := am.DefaultBus.Send(ctx, &message.JetDrop{
+		JetID: jetID,
+		Messages: [][]byte{
+			message.ToBytes(&setRecordMessage),
 		},
-		*core.GenesisPulse,
-		nil,
-	)
+		PulseNumber: core.GenesisPulse.PulseNumber,
+	}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
@@ -691,7 +688,10 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	defer mc.Finish()
 
 	mb := testmessagebus.NewTestMessageBus(t)
+	mb.PulseStorage = storage.NewPulseStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -724,9 +724,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
 	}
-
-	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
-	jc.AmIMock.Return(true, nil)
 
 	objID, err := am.RegisterRequest(
 		ctx,
@@ -824,7 +821,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
 		retries := 3
-		mb.SendFunc = func(c context.Context, m core.Message, p core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if retries == 0 {
 				return &reply.ID{}, nil
 			}
@@ -836,7 +833,8 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 
 		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
 		require.NoError(t, err)
-		jetID := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
+		jetID, actual := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
+		assert.True(t, actual)
 	})
 }

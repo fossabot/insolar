@@ -30,7 +30,8 @@ func TestOnPulse(t *testing.T) {
 	lr.MessageBus = mb
 	lr.JetCoordinator = jc
 
-	jc.AmIMock.Return(false, nil)
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	// test empty lr
 	pulse := core.Pulse{}
@@ -56,19 +57,7 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	assert.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
-
-	// test empty es with query in current and query in queue - es.pending true, message.ExecutorResults.Pending = true, message.ExecutorResults.Queue one element
-	result := make(chan ExecutionQueueResult, 1)
-
-	// TODO maybe need do something more stable and easy to debug
-	go func() {
-		<-result
-	}()
-
-	qe := ExecutionQueueElement{
-		result:     result,
-		returnMode: message.ReturnNoWait,
-	}
+	qe := ExecutionQueueElement{}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
 
@@ -85,7 +74,7 @@ func TestOnPulse(t *testing.T) {
 	require.Equal(t, InPending, lr.state[objectRef].ExecutionState.pending)
 
 	// Executor in new pulse is same node
-	jc.AmIMock.Return(true, nil)
+	jc.IsAuthorizedMock.Return(true, nil)
 	lr.state[objectRef].ExecutionState.pending = PendingUnknown
 
 	lr.state[objectRef] = &ObjectState{
@@ -126,15 +115,15 @@ func TestPendingFinished(t *testing.T) {
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	require.False(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
+	lr.finishPendingIfNeeded(ctx, es, objectRef)
 	require.Zero(t, mb.SendCounter)
 	require.Equal(t, NotPending, es.pending)
 
 	// make sure that in pending case finishPendingIfNeeded returns true
 	// sends PendingFinished message and sets ExecutionState.pending back to NotPending
 	es.pending = InPending
-	mb.SendMock.Expect(ctx, &message.PendingFinished{Reference: objectRef}, pulse, nil).Return(&reply.ID{}, nil)
-	require.True(t, lr.finishPendingIfNeeded(ctx, es, objectRef))
+	mb.SendMock.Expect(ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
+	lr.finishPendingIfNeeded(ctx, es, objectRef)
 	require.Equal(t, NotPending, es.pending)
 }
 
@@ -262,15 +251,19 @@ func TestPrepareState(t *testing.T) {
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 1, len(lr.state[object].ExecutionState.Queue))
 
-	// add new element in existing queue
+	testMsg := message.CallMethod{ReturnMode: message.ReturnNoWait}
+	parcel := testutils.NewParcelMock(t)
+	parcel.MessageMock.Return(&testMsg) // mock message that returns NoWait
+
 	queueElementRequest := testutils.RandomRef()
-	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, ReturnMode: message.ReturnNoWait}}
+	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, Parcel: parcel}}
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
 	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
-	require.Equal(t, message.ReturnNoWait, lr.state[object].ExecutionState.Queue[0].returnMode)
+	require.Equal(t, &testMsg, lr.state[object].ExecutionState.Queue[0].parcel.Message())
 
 }
+
 func TestHandlePendingFinishedMessage(
 	t *testing.T,
 ) {
@@ -307,4 +300,60 @@ func TestHandlePendingFinishedMessage(
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
 
+}
+
+func TestLogicRunner_CheckExecutionLoop(
+	t *testing.T,
+) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	es := &ExecutionState{
+		Current: nil,
+	}
+
+	loop := lr.CheckExecutionLoop(ctx, es, nil)
+	require.False(t, loop)
+
+	ctxA, _ := inslogger.WithTraceField(ctx, "a")
+	ctxB, _ := inslogger.WithTraceField(ctx, "b")
+
+	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+		&message.CallMethod{ReturnMode: message.ReturnResult},
+	)
+	es.Current = &CurrentExecution{
+		ReturnMode: message.ReturnResult,
+		Context:    ctxA,
+	}
+
+	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
+	require.True(t, loop)
+
+	loop = lr.CheckExecutionLoop(ctxB, es, parcel)
+	require.False(t, loop)
+
+	parcel = testutils.NewParcelMock(t).MessageMock.Return(
+		&message.CallMethod{ReturnMode: message.ReturnNoWait},
+	)
+	es.Current = &CurrentExecution{
+		ReturnMode: message.ReturnResult,
+		Context:    ctxA,
+	}
+	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
+	require.False(t, loop)
+
+	parcel = testutils.NewParcelMock(t).MessageMock.Return(
+		&message.CallMethod{ReturnMode: message.ReturnResult},
+	)
+	es.Current = &CurrentExecution{
+		ReturnMode: message.ReturnNoWait,
+		Context:    ctxA,
+	}
+	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
+	require.False(t, loop)
 }

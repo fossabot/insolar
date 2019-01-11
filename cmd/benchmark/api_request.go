@@ -55,7 +55,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	return body
 }
 
-func transfer(ctx context.Context, amount float64, from memberInfo, to memberInfo) string {
+func transfer(ctx context.Context, amount uint, from memberInfo, to memberInfo) string {
 	params := []interface{}{amount, to.ref}
 	body := sendRequest(ctx, "Transfer", params, from)
 	transferResponse := getResponse(body)
@@ -77,10 +77,10 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 		memberPrivKey, err := ks.GeneratePrivateKey()
 		check("Problems with generating of private key:", err)
 
-		memberPrivKeyStr, err := ks.ExportPrivateKey(memberPrivKey)
+		memberPrivKeyStr, err := ks.ExportPrivateKeyPEM(memberPrivKey)
 		check("Problems with serialization of private key:", err)
 
-		memberPubKeyStr, err := ks.ExportPublicKey(ks.ExtractPublicKey(memberPrivKey))
+		memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(memberPrivKey))
 		check("Problems with serialization of public key:", err)
 
 		params := []interface{}{memberName, string(memberPubKeyStr)}

@@ -104,7 +104,7 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message, Pulse, *MessageSendOptions) (Reply, error)
+	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -120,6 +120,11 @@ type MessageBus interface {
 	// Recorder can be created from MessageBus and passed as MessageBus instance.s
 	NewRecorder(ctx context.Context, currentPulse Pulse) (MessageBus, error)
 
+	// Called each new pulse, cleans next pulse messages buffer
+	OnPulse(context.Context, Pulse) error
+}
+
+type TapeWriter interface {
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
@@ -195,6 +200,10 @@ const (
 	TypeGetPendingRequests
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
+	// TypeGetJet requests to calculate a jet for provided object.
+	TypeGetJet
+	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
+	TypeAbandonedRequestsNotification
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

@@ -30,8 +30,9 @@ import (
 )
 
 type response struct {
-	Error  string
-	Result interface{}
+	Error   string
+	Result  interface{}
+	TraceID string
 }
 
 func getResponse(body []byte) *response {
@@ -79,10 +80,10 @@ func createMember() (*memberInfo, error) {
 	memberPrivKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 
-	memberPrivKeyStr, err := ks.ExportPrivateKey(memberPrivKey)
+	memberPrivKeyStr, err := ks.ExportPrivateKeyPEM(memberPrivKey)
 	check("Problems with serialization of private key:", err)
 
-	memberPubKeyStr, err := ks.ExportPublicKey(ks.ExtractPublicKey(memberPrivKey))
+	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(memberPrivKey))
 	check("Problems with serialization of public key:", err)
 
 	member.privateKey = string(memberPrivKeyStr)
@@ -93,9 +94,10 @@ func createMember() (*memberInfo, error) {
 
 	memberResponse := getResponse(body)
 	if memberResponse.Error != "" {
-		return nil, errors.New(memberResponse.Error)
+		return nil, errors.New(memberResponse.Error + ". TraceId: " + memberResponse.TraceID)
 	}
 	member.ref = memberResponse.Result.(string)
+	member.traceId = memberResponse.TraceID
 
 	return &member, nil
 }

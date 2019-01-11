@@ -69,9 +69,10 @@ type PulseManager struct {
 }
 
 type pmOptions struct {
-	enableSync      bool
-	splitThreshold  uint64
-	dropHistorySize int
+	enableSync       bool
+	splitThreshold   uint64
+	dropHistorySize  int
+	storeLightPulses core.PulseNumber
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -88,9 +89,10 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 		db:           db,
 		currentPulse: *core.GenesisPulse,
 		options: pmOptions{
-			enableSync:      pmconf.HeavySyncEnabled,
-			splitThreshold:  pmconf.SplitThreshold,
-			dropHistorySize: conf.JetSizesHistoryDepth,
+			enableSync:       pmconf.HeavySyncEnabled,
+			splitThreshold:   pmconf.SplitThreshold,
+			dropHistorySize:  conf.JetSizesHistoryDepth,
+			storeLightPulses: conf.LightChainLimit,
 		},
 		syncClientsPool: heavySyncPool,
 	}
@@ -104,6 +106,11 @@ func (m *PulseManager) processEndPulse(
 	prevPulseNumber core.PulseNumber,
 	currentPulse, newPulse *core.Pulse,
 ) error {
+	err := m.db.CloneJetTree(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to clone jet tree into a new pulse")
+	}
+
 	jetIDs, err := m.db.GetJets(ctx)
 	if err != nil {
 		return errors.Wrap(err, "can't get jets from storage")
@@ -120,7 +127,7 @@ func (m *PulseManager) processEndPulse(
 			msg, hotRecordsError := m.getExecutorData(
 				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
 			if hotRecordsError != nil {
-				return errors.Wrap(err, "processRecentObjects failed")
+				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
 			}
 			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
 			if sendError != nil {
@@ -131,11 +138,57 @@ func (m *PulseManager) processEndPulse(
 			if dropErr != nil {
 				return errors.Wrap(dropErr, "processDrop failed")
 			}
+
+			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
+			// m.sendAbandonedRequests(ctx, newPulse, jetID)
+
 			return nil
 		})
 	}
-	return g.Wait()
+	err = g.Wait()
+	if err != nil {
+		return errors.Wrap(err, "got error on jets sync")
+	}
+
+	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
+	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
+	for jetID := range jetIDs {
+		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
+			return err
+		}
+	}
+	return nil
 }
+
+// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
+// func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
+// 	pendingRequests := m.RecentStorageProvider.GetStorage(jetID).GetRequests()
+// 	wg := sync.WaitGroup{}
+// 	wg.Add(len(pendingRequests))
+// 	for objID, requests := range pendingRequests {
+// 		go func(object core.RecordID, objectRequests map[core.RecordID]struct{}) {
+// 			defer wg.Done()
+//
+// 			var toSend []core.RecordID
+// 			for reqID := range objectRequests {
+// 				toSend = append(toSend, reqID)
+// 			}
+// 			rep, err := m.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+// 				Object:   object,
+// 				Requests: toSend,
+// 			}, *pulse, nil)
+// 			if err != nil {
+// 				inslogger.FromContext(ctx).Error("failed to notify about pending requests")
+// 				return
+// 			}
+// 			if _, ok := rep.(*reply.OK); !ok {
+// 				inslogger.FromContext(ctx).Error("received unexpected reply on pending notification")
+// 			}
+// 		}(objID, requests)
+// 	}
+//
+// 	wg.Wait()
+// }
 
 func (m *PulseManager) createDrop(
 	ctx context.Context,
@@ -203,7 +256,7 @@ func (m *PulseManager) processDrop(
 		Messages:    messages,
 		PulseNumber: pulse.PulseNumber,
 	}
-	_, err := m.Bus.Send(ctx, msg, *pulse, nil)
+	_, err := m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -242,13 +295,6 @@ func (m *PulseManager) getExecutorData(
 			Index: encoded,
 		}
 
-		if !recentStorage.IsMine(id) {
-			err := m.db.RemoveObjectIndex(ctx, jetID, &id)
-			if err != nil {
-				logger.Error(err)
-				return nil, errors.Wrap(err, "[ processRecentObjects ] Can't RemoveObjectIndex")
-			}
-		}
 	}
 
 	for objID, requests := range recentStorage.GetRequests() {
@@ -316,17 +362,17 @@ func (m *PulseManager) sendExecutorData(
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
 		rightMsg.Jet = *core.NewRecordRef(core.DomainID, *right)
-		_, err = m.Bus.Send(ctx, &leftMsg, *currentPulse, nil)
+		_, err = m.Bus.Send(ctx, &leftMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
-		_, err = m.Bus.Send(ctx, &rightMsg, *currentPulse, nil)
+		_, err = m.Bus.Send(ctx, &rightMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
 	} else {
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-		_, err := m.Bus.Send(ctx, msg, *currentPulse, nil)
+		_, err := m.Bus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
@@ -363,7 +409,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	m.ActiveListSwapper.MoveSyncToActive()
+	// TODO: fix network consensus and uncomment this (after NETD18-74)
+	// m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
@@ -380,6 +427,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 
 	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
+
+	err = m.Bus.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+	}
 
 	if !persist {
 		return nil
@@ -422,6 +474,12 @@ func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseN
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
+	// FIXME: @andreyromancev. 21.12.18. Find a proper place for me. Somewhere at the genesis.
+	err := m.db.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
+	if err != nil && err != storage.ErrOverride {
+		return err
+	}
+
 	if m.options.enableSync {
 		m.syncClientsPool.Bus = m.Bus
 		m.syncClientsPool.PulseStorage = m.PulseStorage

@@ -76,7 +76,8 @@ type Pulsar struct {
 	lastPulseLock sync.RWMutex
 	lastPulse     *core.Pulse
 
-	OwnedBftRow map[string]*BftCell
+	ownedBtfRowLock sync.RWMutex
+	ownedBftRow     map[string]*BftCell
 
 	bftGrid     map[string]map[string]*BftCell
 	BftGridLock sync.RWMutex
@@ -131,7 +132,7 @@ func NewPulsar(
 	}
 	pulsar.PublicKey = pubKey
 
-	pubKeyRaw, err := keyProcessor.ExportPublicKey(pubKey)
+	pubKeyRaw, err := keyProcessor.ExportPublicKeyPEM(pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,7 +155,7 @@ func NewPulsar(
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := keyProcessor.ImportPublicKey([]byte(neighbour.PublicKey))
+		publicKey, err := keyProcessor.ImportPublicKeyPEM([]byte(neighbour.PublicKey))
 		if err != nil {
 			continue
 		}
@@ -165,16 +166,17 @@ func NewPulsar(
 			PublicKey:         publicKey,
 			OutgoingClient:    rpcWrapperFactory.CreateWrapper(),
 		}
-		pulsar.OwnedBftRow[neighbour.PublicKey] = nil
+		pulsar.AddItemToVector(neighbour.PublicKey, nil)
 	}
 
 	gob.Register(Payload{})
-	gob.Register(HandshakePayload{})
-	gob.Register(EntropySignaturePayload{})
-	gob.Register(EntropyPayload{})
-	gob.Register(VectorPayload{})
+	gob.Register(&HandshakePayload{})
+	gob.Register(&EntropySignaturePayload{})
+	gob.Register(&EntropyPayload{})
+	gob.Register(&VectorPayload{})
 	gob.Register(core.PulseSenderConfirmation{})
-	gob.Register(PulsePayload{})
+	gob.Register(&PulsePayload{})
+	gob.Register(&PulseSenderConfirmationPayload{})
 
 	return pulsar, nil
 }
@@ -184,7 +186,7 @@ func (currentPulsar *Pulsar) StartServer(ctx context.Context) {
 	inslogger.FromContext(ctx).Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
 	server := rpc.NewServer()
 
-	err := server.RegisterName("Pulsar", &Handler{Pulsar: currentPulsar})
+	err := server.RegisterName("Pulsar", NewHandler(currentPulsar))
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}
@@ -230,7 +232,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 	}
 
 	var rep Payload
-	message, err := currentPulsar.preparePayload(HandshakePayload{Entropy: currentPulsar.EntropyGenerator.GenerateEntropy()})
+	message, err := currentPulsar.preparePayload(&HandshakePayload{Entropy: currentPulsar.EntropyGenerator.GenerateEntropy()})
 	if err != nil {
 		return err
 	}
@@ -241,7 +243,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 	}
 	casted := reply.Reply.(*Payload)
 
-	result, err := checkPayloadSignature(currentPulsar.CryptographyService, currentPulsar.KeyProcessor, casted)
+	result, err := currentPulsar.checkPayloadSignature(casted)
 	if err != nil {
 		return err
 	}
@@ -316,11 +318,11 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	inslog.Debugf("Entropy generated - %v", currentPulsar.GetGeneratedEntropy())
 	inslog.Debugf("Entropy sign generated - %v", currentPulsar.GeneratedEntropySign)
 
-	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &BftCell{
+	currentPulsar.AddItemToVector(currentPulsar.PublicKeyRaw, &BftCell{
 		Entropy:           *currentPulsar.GetGeneratedEntropy(),
 		IsEntropyReceived: true,
 		Sign:              currentPulsar.GeneratedEntropySign,
-	}
+	})
 
 	currentPulsar.StartProcessLock.Unlock()
 

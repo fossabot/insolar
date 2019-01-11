@@ -18,6 +18,8 @@ package jet
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -25,8 +27,9 @@ import (
 )
 
 type jet struct {
-	Left  *jet
-	Right *jet
+	Left   *jet
+	Right  *jet
+	Actual bool
 }
 
 // Find returns jet for provided reference.
@@ -48,7 +51,11 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 }
 
 // Update add missing tree branches for provided prefix.
-func (j *jet) Update(prefix []byte, maxDepth, depth uint8) {
+func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
+	if setActual {
+		j.Actual = true
+	}
+
 	if depth >= maxDepth {
 		return
 	}
@@ -57,12 +64,23 @@ func (j *jet) Update(prefix []byte, maxDepth, depth uint8) {
 		if j.Right == nil {
 			j.Right = &jet{}
 		}
-		j.Right.Update(prefix, maxDepth, depth+1)
+		j.Right.Update(prefix, setActual, maxDepth, depth+1)
 	} else {
 		if j.Left == nil {
 			j.Left = &jet{}
 		}
-		j.Left.Update(prefix, maxDepth, depth+1)
+		j.Left.Update(prefix, setActual, maxDepth, depth+1)
+	}
+}
+
+// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
+func (j *jet) ResetActual() {
+	if j.Left != nil {
+		j.Left.ResetActual()
+	}
+	j.Actual = false
+	if j.Right != nil {
+		j.Right.ResetActual()
 	}
 }
 
@@ -71,24 +89,49 @@ type Tree struct {
 	Head *jet
 }
 
+// String visualizes Jet's tree.
+func (t Tree) String() string {
+	if t.Head == nil {
+		return "<nil>"
+	}
+	return nodeDeepFmt(0, "", t.Head)
+}
+
+func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
+	prefix := strings.Repeat(" ", deep)
+	if deep == 0 {
+		prefix = "root"
+	}
+	s := fmt.Sprintf("%s%v (level=%v actual=%v)\n", prefix, binPrefix, deep, node.Actual)
+
+	if node.Left != nil {
+		s += nodeDeepFmt(deep+1, binPrefix+"0", node.Left)
+	}
+	if node.Right != nil {
+		s += nodeDeepFmt(deep+1, binPrefix+"1", node.Right)
+	}
+	return s
+}
+
 // NewTree creates new tree.
 func NewTree() *Tree {
-	return &Tree{Head: &jet{}}
+	return &Tree{Head: &jet{Actual: true}}
 }
 
-// Find returns jet for provided reference.
-func (t *Tree) Find(id core.RecordID) *core.RecordID {
+// Find returns jet for provided reference. If found jet is actual, the second argument will be true.
+func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
-		return &id
+		return &id, true
 	}
-	_, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth))
+	j, depth := t.Head.Find(id.Hash(), 0)
+	return NewID(uint8(depth), resetBits(id.Hash(), depth)), j.Actual
 }
 
-// Update add missing tree branches for provided prefix.
-func (t *Tree) Update(id core.RecordID) {
+// Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
+// actual.
+func (t *Tree) Update(id core.RecordID, setActual bool) {
 	maxDepth, prefix := Jet(id)
-	t.Head.Update(prefix, maxDepth, 0)
+	t.Head.Update(prefix, setActual, maxDepth, 0)
 }
 
 // Bytes serializes pulse.
@@ -113,6 +156,11 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	rightPrefix := resetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
+}
+
+// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
+func (t *Tree) ResetActual() {
+	t.Head.ResetActual()
 }
 
 func getBit(value []byte, index uint8) bool {

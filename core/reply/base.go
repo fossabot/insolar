@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"io"
-	"io/ioutil"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -68,6 +67,8 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
+	// TypeJet contains jet.
+	TypeJet
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
@@ -120,6 +121,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &JetMiss{}, nil
 	case TypePendingRequests:
 		return &HasPendingRequests{}, nil
+	case TypeJet:
+		return &Jet{}, nil
 
 	case TypeNodeSign:
 		return &NodeSign{}, nil
@@ -165,11 +168,7 @@ func ToBytes(rep core.Reply) []byte {
 	if err != nil {
 		panic("failed to serialize reply")
 	}
-	buff, err := ioutil.ReadAll(repBuff)
-	if err != nil {
-		panic("failed to serialize reply")
-	}
-	return buff
+	return repBuff.(*bytes.Buffer).Bytes()
 }
 
 func init() {

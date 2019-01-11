@@ -79,6 +79,9 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(t)
+	busMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+		return nil
+	}
 
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)
@@ -89,8 +92,8 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
-	// always return true
-	jcMock.IsAuthorizedMock.Return(true, nil)
+	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jcMock.MeMock.Return(core.RecordRef{})
 
 	// Mock N7: GIL mock
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
@@ -118,7 +121,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	}
 	syncmessagesPerMessage := map[int]*messageStat{}
 	var bussendfailed int32
-	busMock.SendFunc = func(ctx context.Context, msg core.Message, _ core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
+	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {

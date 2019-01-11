@@ -17,16 +17,13 @@
 package pulsar
 
 import (
-	"bytes"
 	"context"
 	"sort"
-
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/utils/entropy"
+	"github.com/pkg/errors"
 )
 
 // FetchNeighbour searches neighbour of the pulsar by pubKey of a neighbout
@@ -74,7 +71,7 @@ func (currentPulsar *Pulsar) clearState() {
 	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
 	currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
-	currentPulsar.OwnedBftRow = map[string]*BftCell{}
+	currentPulsar.ClearVector()
 	currentPulsar.BftGridLock.Lock()
 	currentPulsar.bftGrid = map[string]map[string]*BftCell{}
 	currentPulsar.BftGridLock.Unlock()
@@ -83,65 +80,42 @@ func (currentPulsar *Pulsar) clearState() {
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 	e := currentPulsar.EntropyGenerator.GenerateEntropy()
 	currentPulsar.SetGeneratedEntropy(&e)
-	signature, err := signData(currentPulsar.CryptographyService, currentPulsar.GetGeneratedEntropy())
+
+	sign, err := currentPulsar.CryptographyService.Sign(currentPulsar.GetGeneratedEntropy()[:])
 	if err != nil {
 		return err
 	}
-	currentPulsar.GeneratedEntropySign = signature
+	currentPulsar.GeneratedEntropySign = sign.Bytes()
 
 	return nil
 }
 
-func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
-	sign, err := signData(currentPulsar.CryptographyService, body)
+func (currentPulsar *Pulsar) preparePayload(body PayloadData) (*Payload, error) {
+	hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+	hash, err := body.Hash(hashProvider)
+	if err != nil {
+		return nil, err
+	}
+	sign, err := currentPulsar.CryptographyService.Sign(hash)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign}, nil
+	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign.Bytes()}, nil
 }
 
-func checkPayloadSignature(service core.CryptographyService, processor core.KeyProcessor, request *Payload) (bool, error) {
-	return checkSignature(service, processor, request.Body, request.PublicKey, request.Signature)
-}
-
-func checkSignature(
-	service core.CryptographyService,
-	processor core.KeyProcessor,
-	data interface{},
-	pub string,
-	signature []byte,
-) (bool, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(data)
+func (currentPulsar *Pulsar) checkPayloadSignature(request *Payload) (bool, error) {
+	publicKey, err := currentPulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
 	if err != nil {
 		return false, err
 	}
 
-	publicKey, err := processor.ImportPublicKey([]byte(pub))
+	hash, err := request.Body.Hash(currentPulsar.PlatformCryptographyScheme.IntegrityHasher())
 	if err != nil {
 		return false, err
 	}
 
-	return service.Verify(publicKey, core.SignatureFromBytes(signature), b.Bytes()), nil
-}
-
-func signData(service core.CryptographyService, data interface{}) ([]byte, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(data)
-	if err != nil {
-		return nil, err
-	}
-	signature, err := service.Sign(b.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return signature.Bytes(), nil
+	return currentPulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(request.Signature), hash), nil
 }
 
 // copied from jetcoordinator
@@ -210,4 +184,41 @@ func (currentPulsar *Pulsar) SetGeneratedEntropy(currentSlotEntropy *core.Entrop
 	currentPulsar.generatedEntropyLock.Lock()
 	defer currentPulsar.generatedEntropyLock.Unlock()
 	currentPulsar.generatedEntropy = currentSlotEntropy
+}
+
+
+func (currentPulsar *Pulsar) CreateVectorCopy() map[string]*BftCell {
+	currentPulsar.ownedBtfRowLock.Lock()
+	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+
+	newMap := map[string]*BftCell{}
+
+	for key, value := range currentPulsar.ownedBftRow{
+		newMap[key]= &BftCell{
+			Entropy:value.GetEntropy(),
+			IsEntropyReceived:value.GetIsEntropyReceived(),
+			Sign:value.GetSign(),
+		}
+	}
+
+	return newMap
+}
+
+func (currentPulsar *Pulsar) AddItemToVector(pubKey string, cell *BftCell){
+	currentPulsar.ownedBtfRowLock.Lock()
+	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+	currentPulsar.ownedBftRow[pubKey] = cell
+}
+
+func (currentPulsar *Pulsar) GetItemFromVector(pubKey string) (*BftCell, bool){
+	currentPulsar.ownedBtfRowLock.RLock()
+	defer 	currentPulsar.ownedBtfRowLock.RUnlock()
+	btfCell, ok := currentPulsar.ownedBftRow[pubKey]
+	return btfCell, ok
+}
+
+func (currentPulsar *Pulsar) ClearVector(){
+	currentPulsar.ownedBtfRowLock.Lock()
+	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+	currentPulsar.ownedBftRow = map[string]*BftCell{}
 }

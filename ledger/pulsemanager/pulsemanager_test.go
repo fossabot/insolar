@@ -17,7 +17,6 @@
 package pulsemanager_test
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -72,15 +71,15 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		*firstID: 1,
 	})
 	recentMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
-	recentMock.IsMineFunc = func(inputID core.RecordID) (r bool) {
-		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
-	}
 
 	providerMock := recentstorage.NewProviderMock(t)
 	providerMock.GetStorageMock.Return(recentMock)
 
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(p context.Context, p1 core.Message, _ core.Pulse, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+		return nil
+	}
+	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
 		if !ok {
 			return nil, nil
@@ -104,6 +103,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(core.RecordRef{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
@@ -176,16 +176,19 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	recentMock.ClearObjectsMock.Return()
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
-	recentMock.IsMineMock.Return(true)
 
 	providerMock := recentstorage.NewProviderMock(t)
 	providerMock.GetStorageMock.Return(recentMock)
 
 	mbMock := testutils.NewMessageBusMock(t)
+	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+		return nil
+	}
 	mbMock.SendMock.Return(nil, nil)
 
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(core.RecordRef{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
