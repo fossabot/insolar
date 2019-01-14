@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112cCUQ32vbzE5x7BpeDVkjWZh1r8D3zoXLNE1gyi.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112BMHB1MSg4MvSW62TAV8pHSiByhoauZ1EMztFAV.11111111111111111111111111111111")
 
 // Organization holds proxy type
 type Organization struct {
@@ -407,10 +407,9 @@ func (r *Organization) VerifySigNoWait(method string, params []byte, seed []byte
 }
 
 // AddMember is proxy generated method
-func (r *Organization) AddMember(memberReferenceStr string, organizationReferenceStr string) (string, error) {
-	var args [2]interface{}
+func (r *Organization) AddMember(memberReferenceStr string) (string, error) {
+	var args [1]interface{}
 	args[0] = memberReferenceStr
-	args[1] = organizationReferenceStr
 
 	var argsSerialized []byte
 
@@ -442,10 +441,9 @@ func (r *Organization) AddMember(memberReferenceStr string, organizationReferenc
 }
 
 // AddMemberNoWait is proxy generated method
-func (r *Organization) AddMemberNoWait(memberReferenceStr string, organizationReferenceStr string) error {
-	var args [2]interface{}
+func (r *Organization) AddMemberNoWait(memberReferenceStr string) error {
+	var args [1]interface{}
 	args[0] = memberReferenceStr
-	args[1] = organizationReferenceStr
 
 	var argsSerialized []byte
 

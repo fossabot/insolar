@@ -17,7 +17,11 @@
 package member
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/application/proxy/bprocess"
+	"github.com/insolar/insolar/application/proxy/doctype"
+	"github.com/insolar/insolar/application/proxy/organization"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -84,8 +88,6 @@ func (m *Member) VerifySig(method string, params []byte, seed []byte, sign []byt
 	return nil
 }
 
-var INSATTR_Call_API = true
-
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
@@ -107,7 +109,7 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
-		return m.RegisterNodeCall(rootDomain, params)
+		return m.registerNodeCall(rootDomain, params)
 
 	case "CreateOrganization":
 		return m.createOrganizationCall(rootDomain, params)
@@ -121,7 +123,6 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return m.createProcTemplate(rootDomain, params)
 	case "createDocumentType":
 		return m.createDocTypeCall(rootDomain, params)
-		return m.registerNodeCall(rootDomain, params)
 	case "GetNodeRef":
 		return m.getNodeRef(rootDomain, params)
 	}
@@ -254,22 +255,34 @@ func (m *Member) createOrganizationCall(ref core.RecordRef, params []byte) (inte
 }
 
 func (m *Member) addMemberToOrganization(ref core.RecordRef, params []byte) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(ref)
-	var memberRef string
-	var organizationRef string
-	if err := signer.UnmarshalParams(params, &memberRef, &organizationRef); err != nil {
+	var memberRefStr string
+	var organizationRefStr string
+	if err := signer.UnmarshalParams(params, &memberRefStr, &organizationRefStr); err != nil {
 		return nil, fmt.Errorf("[ addMemberToOrganization ]: %s", err.Error())
 	}
-	return rootDomain.AddMemberToOrganization(memberRef, organizationRef)
+
+	organizationRef, err := core.NewRefFromBase58(organizationRefStr)
+	if err != nil {
+		return "", fmt.Errorf("[ addMemberToOrganization ] Failed to parse organization reference: %s", err.Error())
+	}
+	organization := organization.GetObject(*organizationRef)
+
+	return organization.AddMember(memberRefStr)
 }
 
 func (m *Member) dumpAllOrganizationMembers(ref core.RecordRef, params []byte) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(ref)
-	var organizationRef string
-	if err := signer.UnmarshalParams(params, &organizationRef); err != nil {
+	var organizationRefStr string
+	if err := signer.UnmarshalParams(params, &organizationRefStr); err != nil {
 		return nil, fmt.Errorf("[ dumpAllOrganizationMembers ]: %s", err.Error())
 	}
-	return rootDomain.DumpAllOrganizationMembers(organizationRef)
+
+	organizationRef, err := core.NewRefFromBase58(organizationRefStr)
+	if err != nil {
+		return "", fmt.Errorf("[ dumpAllOrganizationMembers ] Failed to parse organization reference: %s", err.Error())
+	}
+	organization := organization.GetObject(*organizationRef)
+
+	return organization.GetMembers()
 }
 
 func (m *Member) createBProcessCall(ref core.RecordRef, params []byte) (interface{}, error) {
@@ -282,17 +295,22 @@ func (m *Member) createBProcessCall(ref core.RecordRef, params []byte) (interfac
 }
 
 func (m *Member) createProcTemplate(ref core.RecordRef, params []byte) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(ref)
 	var bProcessReferenceStr string
-	var name string
-	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &name); err != nil {
-		return nil, fmt.Errorf("[ createDocTypeCall ]: %s", err.Error())
+	var procTemplateName string
+	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &procTemplateName); err != nil {
+		return nil, fmt.Errorf("[ createProcTemplate ]: %s", err.Error())
 	}
-	return rootDomain.СreateProcTemplate(bProcessReferenceStr, name)
+
+	bProcessRef, err := core.NewRefFromBase58(bProcessReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ createProcTemplate ] Failed to parse bProcess reference: %s", err.Error())
+	}
+	bprocess := bprocess.GetObject(*bProcessRef)
+
+	return bprocess.СreateProcTemplate(procTemplateName)
 }
 
 func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(ref)
 	var bProcessReferenceStr string
 	var name string
 	var fields []doctype.Field
@@ -300,5 +318,19 @@ func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface
 	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &name, &fields, &attachments); err != nil {
 		return nil, fmt.Errorf("[ createDocTypeCall ]: %s", err.Error())
 	}
-	return rootDomain.CreateDocType(bProcessReferenceStr, name, fields, attachments)
+
+	bProcessRef, err := core.NewRefFromBase58(bProcessReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ createProcTemplate ] Failed to parse bProcess reference: %s", err.Error())
+	}
+	bProcess := bprocess.GetObject(*bProcessRef)
+
+	doctypeHolder := doctype.New(name, fields, attachments)
+
+	dt, err := doctypeHolder.AsChild(bProcess.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
+	}
+
+	return dt.GetReference().String(), nil
 }

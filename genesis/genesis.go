@@ -46,26 +46,34 @@ const (
 	memberContract    = "member"
 	allowanceContract = "allowance"
 
-	organizationContract    = "organization"
-	bProcessContract        = "bprocess"
-	docTypeContract         = "doctype"
-	procTemplateContract    = "proctemplate"
-	documentContract        = "document"
-	elementTemplateContract = "eltemplate"
-	elementContract         = "element"
-	processContract         = "process"
+	bProcessContract         = "bprocess"
+	condRoutTemplateContract = "condrouttemplate"
+	docTypeContract          = "doctype"
+	documentContract         = "document"
+	elementContract          = "element"
+	elemTemplateContract     = "elemtemplate"
+	organizationContract     = "organization"
+	participantContract      = "participant"
+	processContract          = "process"
+	procTemplateContract     = "proctemplate"
+	responseContract         = "response"
+	stageTemplateContract    = "stagetemplate"
 )
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord,
 
-	organizationContract,
 	bProcessContract,
+	condRoutTemplateContract,
 	docTypeContract,
-	procTemplateContract,
 	documentContract,
-	elementTemplateContract,
 	elementContract,
+	elemTemplateContract,
+	organizationContract,
+	participantContract,
 	processContract,
+	procTemplateContract,
+	responseContract,
+	stageTemplateContract,
 }
 
 type messageBusLocker interface {

@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111JygfdKHpKEWNzMutRqGnfn816AT8AcC4uLoyHK.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112q1xKWzeJLVuzc2kcrijHt2DL9mChAP2iMSBcje.11111111111111111111111111111111")
 
 // ElemTemplate holds proxy type
 type ElemTemplate struct {
@@ -61,7 +61,7 @@ func GetImplementationFrom(object core.RecordRef) (*ElemTemplate, error) {
 }
 
 // New is constructor
-func New(name string, previousElements []elemTemplateProxy.ElemTemplate, nextElementTemplateSuccess []elemTemplateProxy.ElemTemplate, nextElementTemplateFail []elemTemplateProxy.ElemTemplate) *ContractConstructorHolder {
+func New(name string, previousElements []ElemTemplate, nextElementTemplateSuccess []ElemTemplate, nextElementTemplateFail []ElemTemplate) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = name
 	args[1] = previousElements
@@ -75,23 +75,6 @@ func New(name string, previousElements []elemTemplateProxy.ElemTemplate, nextEle
 	}
 
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
-}
-
-// NewFromRefs is constructor
-func NewFromRefs(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string) *ContractConstructorHolder {
-	var args [4]interface{}
-	args[0] = name
-	args[1] = previousElemTemplatesRefs
-	args[2] = nextElementTemplateSuccessRefs
-	args[3] = nextElementTemplateFailRefs
-
-	var argsSerialized []byte
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	return &ContractConstructorHolder{constructorName: "NewFromRefs", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

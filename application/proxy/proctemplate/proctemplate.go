@@ -1,6 +1,7 @@
 package proctemplate
 
 import (
+	elemTemplateProxy "github.com/insolar/insolar/application/proxy/elemtemplate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
@@ -8,7 +9,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11113K9JF912tAiJoYotJ2Y1QVK9hqqDjFAgWPED1qh.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111Xa5JLxxqbJcNGoFSwz8YnZ3QuHmrY9KgzWMR6z.11111111111111111111111111111111")
 
 // ProcTemplate holds proxy type
 type ProcTemplate struct {
@@ -298,6 +299,66 @@ func (r *ProcTemplate) GetDocumentsNoWait() error {
 	return nil
 }
 
+// CreateElemTemplate is proxy generated method
+func (r *ProcTemplate) CreateElemTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string) (*elemTemplateProxy.ElemTemplate, error) {
+	var args [4]interface{}
+	args[0] = name
+	args[1] = previousElemTemplatesRefs
+	args[2] = nextElementTemplateSuccessRefs
+	args[3] = nextElementTemplateFailRefs
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 *elemTemplateProxy.ElemTemplate
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateElemTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// CreateElemTemplateNoWait is proxy generated method
+func (r *ProcTemplate) CreateElemTemplateNoWait(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string) error {
+	var args [4]interface{}
+	args[0] = name
+	args[1] = previousElemTemplatesRefs
+	args[2] = nextElementTemplateSuccessRefs
+	args[3] = nextElementTemplateFailRefs
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateElemTemplate", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CreateStageTemplate is proxy generated method
 func (r *ProcTemplate) CreateStageTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string, participantsRef string, expirationDate string) (string, error) {
 	var args [6]interface{}
@@ -363,12 +424,13 @@ func (r *ProcTemplate) CreateStageTemplateNoWait(name string, previousElemTempla
 }
 
 // CreateConditionRouterTemplate is proxy generated method
-func (r *ProcTemplate) CreateConditionRouterTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccess []string, nextElementTemplateFail []string) (string, error) {
-	var args [4]interface{}
+func (r *ProcTemplate) CreateConditionRouterTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string, conditionJSON []byte) (string, error) {
+	var args [5]interface{}
 	args[0] = name
 	args[1] = previousElemTemplatesRefs
-	args[2] = nextElementTemplateSuccess
-	args[3] = nextElementTemplateFail
+	args[2] = nextElementTemplateSuccessRefs
+	args[3] = nextElementTemplateFailRefs
+	args[4] = conditionJSON
 
 	var argsSerialized []byte
 
@@ -400,12 +462,13 @@ func (r *ProcTemplate) CreateConditionRouterTemplate(name string, previousElemTe
 }
 
 // CreateConditionRouterTemplateNoWait is proxy generated method
-func (r *ProcTemplate) CreateConditionRouterTemplateNoWait(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccess []string, nextElementTemplateFail []string) error {
-	var args [4]interface{}
+func (r *ProcTemplate) CreateConditionRouterTemplateNoWait(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string, conditionJSON []byte) error {
+	var args [5]interface{}
 	args[0] = name
 	args[1] = previousElemTemplatesRefs
-	args[2] = nextElementTemplateSuccess
-	args[3] = nextElementTemplateFail
+	args[2] = nextElementTemplateSuccessRefs
+	args[3] = nextElementTemplateFailRefs
+	args[4] = conditionJSON
 
 	var argsSerialized []byte
 

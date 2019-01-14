@@ -3,9 +3,8 @@ package bprocess
 import (
 	"encoding/json"
 	"fmt"
-	docTypeContract "github.com/insolar/insolar/application/contract/doctype"
 	procTemplateContract "github.com/insolar/insolar/application/contract/proctemplate"
-	docTypeProxy "github.com/insolar/insolar/application/proxy/doctype"
+	"github.com/insolar/insolar/application/proxy/doctype"
 	procTemplateProxy "github.com/insolar/insolar/application/proxy/proctemplate"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -70,42 +69,46 @@ func (bProcess *BProcess) GetProcTemplates() (resultJSON []byte, err error) {
 	return resultJSON, nil
 }
 
-// CreateDocType processes create document type request
-func (bProcess *BProcess) CreateDocType(name string, fields []docTypeProxy.Field, attachments []docTypeProxy.Attachment) (string, error) {
-
-	doctypeHolder := docTypeProxy.New(name, fields, attachments)
-
-	dt, err := doctypeHolder.AsChild(bProcess.GetReference())
-	if err != nil {
-		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
-	}
-
-	return dt.GetReference().String(), nil
-}
-
 // GetDocTypes processes dump all Business process Document Types
 func (bProcess *BProcess) GetDocTypes() (resultJSON []byte, err error) {
 
-	iterator, err := bProcess.NewChildrenTypedIterator(docTypeProxy.GetPrototype())
+	iterator, err := bProcess.NewChildrenTypedIterator(doctype.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ GetDocTypes ] Can't get children: %s", err.Error())
 	}
 
-	res := []docTypeContract.DocType{}
+	type Field struct {
+		Name  string
+		Type  string
+		Value []byte
+	}
+	type Attachment struct {
+		Name  string
+		Type  string
+		Value []byte
+	}
+	type DocType struct {
+		foundation.BaseContract
+		Name        string
+		Fields      []Field
+		Attachments []Attachment
+	}
+
+	res := []DocType{}
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
 			return nil, fmt.Errorf("[ GetDocTypes ] Can't get next child: %s", err.Error())
 		}
 
-		docTypeProxyObject := docTypeProxy.GetObject(cref)
+		docTypeProxyObject := doctype.GetObject(cref)
 
 		procTemplateJSON, err := docTypeProxyObject.ToJSON()
 		if err != nil {
 			return nil, fmt.Errorf("[ GetDocTypes ] Problem with making request: %s", err.Error())
 		}
 
-		docTypeContractObject := docTypeContract.DocType{}
+		docTypeContractObject := DocType{}
 		err = json.Unmarshal(procTemplateJSON, &docTypeContractObject)
 		if err != nil {
 			return nil, fmt.Errorf("[ GetDocTypes ] Problem with unmarshal children from response: %s", err.Error())

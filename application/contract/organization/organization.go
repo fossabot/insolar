@@ -71,32 +71,28 @@ func (organization *Organization) VerifySig(method string, params []byte, seed [
 }
 
 // AddMemberToOrganization processes add member to organization
-func (organization *Organization) AddMember(memberReferenceStr string, organizationReferenceStr string) (string, error) {
+func (organization *Organization) AddMember(memberReferenceStr string) (string, error) {
 
 	memberReference, err := core.NewRefFromBase58(memberReferenceStr)
 	if err != nil {
-		return "", fmt.Errorf("[ AddMemberToOrganization ] Failed to parse member reference: %s", err.Error())
-	}
-	organizationReference, err := core.NewRefFromBase58(organizationReferenceStr)
-	if err != nil {
-		return "", fmt.Errorf("[ AddMemberToOrganization ] Failed to parse organization reference: %s", err.Error())
+		return "", fmt.Errorf("[ AddMember ] Failed to parse member reference: %s", err.Error())
 	}
 
 	memberObject := memberProxy.GetObject(*memberReference)
 
 	name, err := memberObject.GetName()
 	if err != nil {
-		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get name : %s", err.Error())
+		return "", fmt.Errorf("[ AddMember ] Can't get name : %s", err.Error())
 	}
 	key, err := memberObject.GetPublicKey()
 	if err != nil {
-		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't get key : %s", err.Error())
+		return "", fmt.Errorf("[ AddMember ] Can't get key : %s", err.Error())
 	}
 
 	memberHolder := memberProxy.New(name, key)
-	m, err := memberHolder.AsChild(*organizationReference)
+	m, err := memberHolder.AsChild(organization.GetReference())
 	if err != nil {
-		return "", fmt.Errorf("[ AddMemberToOrganization ] Can't save as child: %s", err.Error())
+		return "", fmt.Errorf("[ AddMember ] Can't save as child: %s", err.Error())
 	}
 
 	return m.GetReference().String(), nil

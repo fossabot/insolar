@@ -6,7 +6,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type FieldType string
 type AttachmentType string
 type Field struct {
 	Name  string
@@ -18,6 +17,7 @@ type Attachment struct {
 	Type  FieldType
 	Value []byte
 }
+type FieldType string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator

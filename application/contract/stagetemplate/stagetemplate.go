@@ -55,4 +55,6 @@ func (stageTemplate *StageTemplate) setDocsPermissions(docsPermissionStrs map[st
 	}
 
 	stageTemplate.DocsPermissions = docsPermissions
+
+	return nil
 }

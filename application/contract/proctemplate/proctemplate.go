@@ -3,10 +3,10 @@ package proctemplate
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/application/contract/condroutertemplate/condition"
+	"github.com/insolar/insolar/application/contract/condrouttemplate/condition"
 	documentContract "github.com/insolar/insolar/application/contract/document"
 	"github.com/insolar/insolar/application/proxy/allowance"
-	condRouterTemplateProxy "github.com/insolar/insolar/application/proxy/condroutertemplate"
+	condRouterTemplateProxy "github.com/insolar/insolar/application/proxy/condrouttemplate"
 	docTypeProxy "github.com/insolar/insolar/application/proxy/doctype"
 	documentProxy "github.com/insolar/insolar/application/proxy/document"
 	elemTemplateProxy "github.com/insolar/insolar/application/proxy/elemtemplate"
@@ -101,6 +101,49 @@ func (procTemplate *ProcTemplate) createElementTemplate(
 	nextElementTemplateFail []string) {
 }
 
+func (procTemplate *ProcTemplate) CreateElemTemplate(name string, previousElemTemplatesRefs []string, nextElementTemplateSuccessRefs []string, nextElementTemplateFailRefs []string) (*elemTemplateProxy.ElemTemplate, error) {
+
+	previousElemTemplates, err := GetElemTemplatesByRefStrs(previousElemTemplatesRefs)
+	if err != nil {
+		return nil, err
+	}
+
+	nextElementTemplateSuccess, err := GetElemTemplatesByRefStrs(nextElementTemplateSuccessRefs)
+	if err != nil {
+		return nil, err
+	}
+
+	nextElementTemplateFail, err := GetElemTemplatesByRefStrs(nextElementTemplateFailRefs)
+	if err != nil {
+		return nil, err
+	}
+
+	elemTemplateHolder := elemTemplateProxy.New(name, previousElemTemplates[:], nextElementTemplateSuccess[:], nextElementTemplateFail[:])
+
+	elemTemplate, err := elemTemplateHolder.AsChild(procTemplate.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("[ CreateStageTemplate ] Can't save as child: %s", err.Error())
+	}
+
+	return elemTemplate, nil
+}
+
+func GetElemTemplatesByRefStrs(refStrs []string) ([]elemTemplateProxy.ElemTemplate, error) {
+
+	elemTemplates := make([]elemTemplateProxy.ElemTemplate, len(refStrs))
+
+	for i, refStr := range refStrs {
+		elementTemplateRef, err := core.NewRefFromBase58(refStr)
+		if err != nil {
+			return nil, fmt.Errorf("[ GetElemTemplatesByRefStrs ] Failed to parse element template reference: %s", err.Error())
+		}
+
+		elemTemplates[i] = *elemTemplateProxy.GetObject(*elementTemplateRef)
+	}
+
+	return elemTemplates[:], nil
+}
+
 // CreateStageTemplate processes create stage request
 func (procTemplate *ProcTemplate) CreateStageTemplate(
 	name string,
@@ -110,10 +153,9 @@ func (procTemplate *ProcTemplate) CreateStageTemplate(
 	participantsRef string,
 	expirationDate string) (string, error) {
 
-	elemTemplateHolder := elemTemplateProxy.NewFromRefs(name, previousElemTemplatesRefs, nextElementTemplateSuccessRefs, nextElementTemplateFailRefs)
-	et, err := elemTemplateHolder.AsChild(procTemplate.GetReference())
+	elemTemplate, err := procTemplate.CreateElemTemplate(name, previousElemTemplatesRefs, nextElementTemplateSuccessRefs, nextElementTemplateFailRefs)
 	if err != nil {
-		return "", fmt.Errorf("[ CreateStageTemplate ] Can't save as child: %s", err.Error())
+		return "", fmt.Errorf("[ CreateStageTemplate ] Can't create element template: %s", err.Error())
 	}
 
 	ref, err := core.NewRefFromBase58(participantsRef)
@@ -124,7 +166,7 @@ func (procTemplate *ProcTemplate) CreateStageTemplate(
 	participantObject := *participantProxy.GetObject(*ref)
 
 	stageTemplateHolder := stageTemplateProxy.New(participantObject, expirationDate)
-	st, err := stageTemplateHolder.AsChild(et.GetReference())
+	st, err := stageTemplateHolder.AsChild(elemTemplate.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateStageTemplate ] Can't save as child: %s", err.Error())
 	}
@@ -139,10 +181,9 @@ func (procTemplate *ProcTemplate) CreateConditionRouterTemplate(name string,
 	nextElementTemplateFailRefs []string,
 	conditionJSON []byte) (string, error) {
 
-	elemTemplateHolder := elemTemplateProxy.NewFromRefs(name, previousElemTemplatesRefs, nextElementTemplateSuccessRefs, nextElementTemplateFailRefs)
-	et, err := elemTemplateHolder.AsChild(procTemplate.GetReference())
+	elemTemplate, err := procTemplate.CreateElemTemplate(name, previousElemTemplatesRefs, nextElementTemplateSuccessRefs, nextElementTemplateFailRefs)
 	if err != nil {
-		return "", fmt.Errorf("[ CreateConditionRouterTemplate ] Can't save as child: %s", err.Error())
+		return "", fmt.Errorf("[ CreateStageTemplate ] Can't create element template: %s", err.Error())
 	}
 
 	var conditionObject condition.Condition
@@ -150,7 +191,7 @@ func (procTemplate *ProcTemplate) CreateConditionRouterTemplate(name string,
 	json.Unmarshal(conditionJSON, &conditionObject)
 
 	condRouterTemplateHolder := condRouterTemplateProxy.New(conditionObject)
-	st, err := condRouterTemplateHolder.AsChild(et.GetReference())
+	st, err := condRouterTemplateHolder.AsChild(elemTemplate.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateConditionRouterTemplate ] Can't save as child: %s", err.Error())
 	}

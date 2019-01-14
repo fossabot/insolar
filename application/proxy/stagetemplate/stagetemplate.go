@@ -11,7 +11,7 @@ type AccessModificator string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11113a7vgVLV6QVzZmN6kmKA8hEGRkXX3VUjazspY4b.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112CZ5DwRc6mFXmxzhgt5Nw8PkYev26iQTydSAur5.11111111111111111111111111111111")
 
 // StageTemplate holds proxy type
 type StageTemplate struct {

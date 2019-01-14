@@ -12,7 +12,7 @@ type Response struct {
 	Signature []byte
 }
 
-func New(name, agreement, reason string, signature []byte) (*Response, error) {
+func New(name string, agreement string, reason string, signature []byte) (*Response, error) {
 	return &Response{
 		foundation.BaseContract{},
 		name,
