@@ -37,7 +37,6 @@ func TestExporter_Export(t *testing.T) {
 	db, clean := storagetest.TmpDB(ctx, t)
 	defer clean()
 	jetID := core.TODOJetID
-
 	exporter := NewExporter(db)
 
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber, PulseTimestamp: 1})

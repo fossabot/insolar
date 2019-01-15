@@ -25,6 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/trace"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -208,7 +211,7 @@ type LogicRunner struct {
 	Cfg          *configuration.LogicRunner
 
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
-	stateMutex sync.Mutex
+	stateMutex sync.RWMutex
 
 	sock net.Listener
 }
@@ -320,6 +323,19 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
+
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
+	span.AddAttributes(
+		trace.StringAttribute("msg.Type", msg.Type().String()),
+	)
+	defer span.End()
+
+	rep, err := lr.executeActual(ctx, parcel, msg)
+	return rep, err
+}
+
+func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, msg message.IBaseLogicMessage) (core.Reply, error) {
+
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
 
@@ -653,41 +669,39 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
+	es := state.ExecutionState
 	state.Unlock()
 
-	state.ExecutionState.Lock()
+	es.Lock()
 
 	// prepare pending
-	if state.ExecutionState.pending == PendingUnknown {
+	if es.pending == PendingUnknown {
 		if msg.Pending {
-			state.ExecutionState.pending = InPending
+			es.pending = InPending
 		} else {
-			state.ExecutionState.pending = NotPending
+			es.pending = NotPending
 		}
 	}
 
 	//prepare Queue
 	if msg.Queue != nil {
-		state := lr.UpsertObjectState(msg.GetReference())
-
 		queueFromMessage := make([]ExecutionQueueElement, 0)
 		for _, qe := range msg.Queue {
 			queueFromMessage = append(
 				queueFromMessage,
 				ExecutionQueueElement{
-					ctx:     qe.Ctx,
+					ctx:     qe.Parcel.Context(context.Background()),
 					parcel:  qe.Parcel,
 					request: qe.Request,
 					pulse:   qe.Pulse,
 				})
 		}
-		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
-
+		es.Queue = append(queueFromMessage, es.Queue...)
 	}
 
-	state.ExecutionState.Unlock()
+	es.Unlock()
 
-	err := lr.StartQueueProcessorIfNeeded(ctx, state.ExecutionState, msg)
+	err := lr.StartQueueProcessorIfNeeded(ctx, es, msg)
 	if err != nil {
 		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
 	}
@@ -940,7 +954,6 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Ctx:     elem.ctx,
 			Parcel:  elem.parcel,
 			Request: elem.request,
 			Pulse:   elem.pulse,

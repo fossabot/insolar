@@ -52,7 +52,7 @@ func Test_StoreKeyValues(t *testing.T) {
 	pulsescount := 3
 
 	func() {
-		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+		db, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
@@ -83,7 +83,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		gotidxs []key
 	)
 	func() {
-		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+		db, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 		err := db.StoreKeyValues(ctx, allKVs)
 		require.NoError(t, err)
@@ -102,7 +102,6 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 
 	jetID := core.TODOJetID
 	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
-
 	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {

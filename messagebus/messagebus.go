@@ -23,10 +23,12 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
-	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -34,6 +36,8 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -148,7 +152,14 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
+	span.AddAttributes(
+		trace.StringAttribute("msgType", msg.Type().String()),
+		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
+	)
+	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	span.End()
+	return rep, err
 }
 
 // CreateParcel creates signed message from provided message.
@@ -183,6 +194,9 @@ func (mb *MessageBus) SendParcel(
 			return nil, err
 		}
 	}
+
+	start := time.Now()
+	defer metrics.ParcelsTime.WithLabelValues(parcel.Type().String()).Observe(time.Since(start).Seconds())
 
 	metrics.ParcelsSentTotal.WithLabelValues(parcel.Type().String()).Inc()
 
@@ -243,23 +257,9 @@ func (mb *MessageBus) accuireMessagePoolItem() bool {
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
-	pulse, err := mb.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
-	}
-
-	if msg.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
-		<-mb.NextPulseMessagePoolChan
-	}
-
-	pulse, err = mb.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
-	}
-
-	if msg.Pulse() != pulse.PulseNumber {
-		inslogger.FromContext(ctx).Error("[ MessageBus ] Incorrect message pulse")
-		return nil, fmt.Errorf("[ MessageBus ] Incorrect message pulse %d %d", msg.Pulse(), pulse.PulseNumber)
+	var err error
+	if err = mb.checkPulse(ctx, msg, false); err != nil {
+		return nil, errors.Wrap(err, "[ doDeliver ] error in checkPulse")
 	}
 
 	// We must check barrier just before exiting function
@@ -273,6 +273,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 	ctx = hack.SetSkipValidation(ctx, true)
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
+
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
@@ -281,6 +282,34 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	}
 
 	return resp, nil
+}
+
+func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked bool) error {
+	pulse, err := mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+	}
+
+	if parcel.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
+		if locked {
+			mb.globalLock.RUnlock()
+		}
+		<-mb.NextPulseMessagePoolChan
+		if locked {
+			mb.globalLock.RLock()
+		}
+	}
+
+	pulse, err = mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+	}
+
+	if parcel.Pulse() != pulse.PulseNumber {
+		inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
+		return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
+	}
+	return nil
 }
 
 // Deliver method calls LogicRunner.Execute on local host
@@ -299,6 +328,12 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	mb.globalLock.RLock()
+
+	if err = mb.checkPulse(ctx, parcel, true); err != nil {
+		mb.globalLock.RUnlock()
+		return nil, err
+	}
+
 	if err = mb.checkParcel(parcelCtx, parcel); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
@@ -332,16 +367,17 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 		}
 	}
 
-	if parcel.DelegationToken() != nil {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			return errors.New("delegation token is not valid")
-		}
-		return nil
-	}
+	// FIXME: @andreyromancev. 09.01.2019. Implement verify method.
+	// if parcel.DelegationToken() != nil {
+	// 	valid, err := mb.DelegationTokenFactory.Verify(parcel)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if !valid {
+	// 		return errors.New("delegation token is not valid")
+	// 	}
+	// 	return nil
+	// }
 
 	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 	if sendingObject == nil {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/heavy"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
@@ -44,6 +45,7 @@ type MessageHandler struct {
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
+	HeavyJetTreeSync           heavy.JetTreeSync               `inject:""`
 
 	db             *storage.DB
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -63,7 +65,7 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := middleware{db: h.db, jetCoordinator: h.JetCoordinator, messageBus: h.Bus}
+	m := newMiddleware(h.conf, h.db, h.JetCoordinator, h.Bus)
 
 	// Generic.
 	h.replayHandlers[core.TypeGetCode] = m.checkJet(h.handleGetCode)
@@ -83,34 +85,30 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
 	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
-	// Heavy.
-	h.replayHandlers[core.TypeHeavyStartStop] = h.handleHeavyStartStop
-	h.replayHandlers[core.TypeHeavyReset] = h.handleHeavyReset
-	h.replayHandlers[core.TypeHeavyPayload] = h.handleHeavyPayload
-
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.saveParcel(h.handleGetCode)))
-	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.saveParcel(h.handleGetObject)))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.saveParcel(h.handleGetDelegate)))
-	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.saveParcel(h.handleGetChildren)))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.saveParcel(h.handleSetRecord)))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.saveParcel(h.handleUpdateObject)))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.saveParcel(h.handleRegisterChild)))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.saveParcel(h.handleSetBlob)))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
+	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetCode))))
+	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObject))))
+	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetDelegate))))
+	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetChildren))))
+	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleSetRecord)))))
+	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleUpdateObject)))))
+	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleRegisterChild)))))
+	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleSetBlob)))))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObjectIndex))))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.waitForDrop(m.saveParcel(h.handleHasPendingRequests))))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.saveParcel(h.handleValidationCheck)))
-	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.saveParcel(h.handleHotRecords)))
+	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidateRecord))))
+	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidationCheck))))
+	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.unlockDropWaiters(m.saveParcel(h.handleHotRecords))))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
+	h.Bus.MustRegister(core.TypeHeavyJetTree, h.handleHeavyJetTree)
 
 	return nil
 }
@@ -163,7 +161,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	msg := parcel.Message().(*message.GetCode)
 	jetID := jetFromContext(ctx)
 
-	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
+	codeRec, err := getCode(ctx, h.db, jetID, msg.Code.Record())
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		var node *core.RecordRef
@@ -588,15 +586,11 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		return nil, err
 	}
 
-	// TODO: temporary hardcoded tree. Remove after split is functional.
 	err = h.db.UpdateJetTree(
 		ctx,
 		parcel.Pulse(),
 		true,
-		*jet.NewID(2, []byte{}),       // 00
-		*jet.NewID(2, []byte{1 << 6}), // 01
-		*jet.NewID(1, []byte{1 << 7}), // 10
-		msg.JetID,                     // Don't delete this.
+		msg.JetID,
 	)
 	if err != nil {
 		return nil, err
@@ -706,8 +700,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	return &reply.OK{}, nil
 }
 
-func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *jet.NewID(0, nil)
+func getCode(ctx context.Context, s storage.Store, jetID core.RecordID, id *core.RecordID) (*record.CodeRecord, error) {
 
 	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {
@@ -775,6 +768,27 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}
+	err = h.db.UpdateJetTree(
+		ctx,
+		parcel.Pulse(),
+		true,
+		jetID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: @andreyromancev. 09.01.2019. Remove after multijet works properly.
+	err = h.db.UpdateJetTree(
+		ctx,
+		parcel.Pulse(),
+		true,
+		*jet.NewID(2, []byte{1 << 7}), // 10
+		*jet.NewID(2, []byte{1 << 6}), // 01
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	for objID, requests := range msg.PendingRequests {
@@ -811,20 +825,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 		meta.TTL--
 		recentStorage.AddObjectWithTLL(id, meta.TTL)
-	}
-
-	// TODO: temporary hardcoded tree. Remove after split is functional.
-	err = h.db.UpdateJetTree(
-		ctx,
-		parcel.Pulse(),
-		true,
-		*jet.NewID(2, []byte{}),       // 00
-		*jet.NewID(2, []byte{1 << 6}), // 01
-		*jet.NewID(1, []byte{1 << 7}), // 10
-		jetID,                         // Don't delete this.
-	)
-	if err != nil {
-		return nil, err
 	}
 
 	err = h.db.AddJets(ctx, jetID)

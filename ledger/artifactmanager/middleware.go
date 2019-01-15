@@ -18,13 +18,14 @@ package artifactmanager
 
 import (
 	"context"
+	"sync"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -33,9 +34,29 @@ const (
 )
 
 type middleware struct {
-	db             *storage.DB
-	jetCoordinator core.JetCoordinator
-	messageBus     core.MessageBus
+	db                     *storage.DB
+	jetCoordinator         core.JetCoordinator
+	messageBus             core.MessageBus
+	jetDropTimeoutProvider jetDropTimeoutProvider
+	conf                   *configuration.Ledger
+}
+
+func newMiddleware(
+	conf *configuration.Ledger,
+	db *storage.DB,
+	jetCoordinator core.JetCoordinator,
+	messageBus core.MessageBus,
+) *middleware {
+	return &middleware{
+		db:             db,
+		jetCoordinator: jetCoordinator,
+		messageBus:     messageBus,
+		jetDropTimeoutProvider: jetDropTimeoutProvider{
+			waiters:          map[core.RecordID]*jetDropTimeout{},
+			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
+		},
+		conf: conf,
+	}
 }
 
 type jetKey struct{}
@@ -63,7 +84,20 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.New("unexpected message")
 		}
 
-		// Calculate jet.
+		// Check token jet.
+		token := parcel.DelegationToken()
+		if token != nil {
+			// Calculate jet for target pulse.
+			target := *msg.DefaultTarget().Record()
+			tree, err := m.db.GetJetTree(ctx, target.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			jetID, _ := tree.Find(target)
+			return handler(contextWithJet(ctx, *jetID), parcel)
+		}
+
+		// Calculate jet for current pulse.
 		var jetID core.RecordID
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
@@ -91,7 +125,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			}
 			if *heavy == m.jetCoordinator.Me() {
 				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
-				return handler(contextWithJet(ctx, jet.ZeroJetID), parcel)
+				return handler(contextWithJet(ctx, jetID), parcel)
 			}
 
 			logger.Debugf("checkJet: not Mine")
@@ -114,6 +148,23 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 		if err != nil {
 			return nil, err
 		}
+
+		return handler(ctx, parcel)
+	}
+}
+
+func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		// TODO: @andreyromancev. 10.01.2019. Uncomment to enable backpressure for writing requests.
+		// Currently disabled due to big initial difference in pulse numbers, which prevents requests from being accepted.
+		// jetID := jetFromContext(ctx)
+		// replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// if parcel.Pulse()-replicated >= m.conf.LightChainLimit {
+		// 	return nil, errors.New("failed to write data (waiting for heavy replication)")
+		// }
 
 		return handler(ctx, parcel)
 	}
@@ -161,7 +212,7 @@ func (m *middleware) fetchJet(
 	// TODO: check if the same executor again or the same jet again. INS-1041
 
 	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, r.Actual)
+	err = m.db.UpdateJetTree(ctx, pulse, true, r.ID)
 	if err != nil {
 		return nil, err
 	}

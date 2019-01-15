@@ -38,6 +38,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -235,10 +236,13 @@ func waitForNet() error {
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
-			} else {
-				fmt.Println("[ waitForNet ] Good response from port " + port + ". Response: " + resp.NetworkState)
-				currentOk++
 			}
+			if resp.NetworkState != core.CompleteNetworkState.String() {
+				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. Response: " + resp.NetworkState)
+				break
+			}
+			fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is ready. Response: " + resp.NetworkState)
+			currentOk++
 		}
 		if currentOk == numNodes {
 			fmt.Printf("[ waitForNet ] All %d nodes have started\n", numNodes)
@@ -384,11 +388,17 @@ func setup() error {
 }
 
 func teardown() {
-	err := stopInsolard()
-	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+	var envSetting = os.Getenv("TEST_ENV")
+	var err error
+	fmt.Println("TEST_ENV: ", envSetting)
+	if envSetting != "CI" {
+		err = stopInsolard()
+
+		if err != nil {
+			fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+		}
+		fmt.Println("[ teardown ] insolard was successfully stoped")
 	}
-	fmt.Println("[ teardown ] insolard was successfully stoped")
 
 	stopAllInsgorunds()
 	fmt.Println("[ teardown ] insgorund was successfully stoped")

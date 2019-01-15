@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -27,6 +28,8 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
+
+const createMemberRetry = 3
 
 type response struct {
 	Error  string
@@ -40,31 +43,38 @@ func getResponse(body []byte) *response {
 	return res
 }
 
-func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) []byte {
+func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) ([]byte, error) {
 	reqCfg := &requester.RequestConfigJSON{
 		Params: params,
 		Method: method,
 	}
 
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
-	check("can not create user config:", err)
+	if err != nil {
+		return nil, errors.Wrap(err, "can not create user config")
+	}
 
 	body, err := requester.Send(ctx, apiurls.Next(), userCfg, reqCfg)
-	check("can not send request:", err)
+	if err != nil {
+		return nil, errors.Wrap(err, "can not send request")
+	}
 
-	return body
+	return body, nil
 }
 
-func transfer(ctx context.Context, amount uint, from memberInfo, to memberInfo) string {
+func transfer(ctx context.Context, amount uint, from memberInfo, to memberInfo) error {
 	params := []interface{}{amount, to.ref}
-	body := sendRequest(ctx, "Transfer", params, from)
+	body, err := sendRequest(ctx, "Transfer", params, from)
+	if err != nil {
+		return err
+	}
 	transferResponse := getResponse(body)
 
 	if transferResponse.Error != "" {
-		return transferResponse.Error
+		return errors.New(transferResponse.Error)
 	}
 
-	return "success"
+	return nil
 }
 
 func createMembers(concurrent int) ([]memberInfo, error) {
@@ -86,13 +96,28 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 		params := []interface{}{memberName, string(memberPubKeyStr)}
 		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("createMemberNumber%d", i))
 
-		body := sendRequest(ctx, "CreateMember", params, rootMember)
+		var body []byte
+		var memberRef string
 
-		memberResponse := getResponse(body)
-		if memberResponse.Error != "" {
-			return nil, errors.New(memberResponse.Error)
+		for j := 0; j < createMemberRetry; j++ {
+			body, err = sendRequest(ctx, "CreateMember", params, rootMember)
+			if err != nil {
+				fmt.Println("Create member error", err.Error(), "retry")
+				time.Sleep(time.Second)
+				continue
+			}
+			memberResponse := getResponse(body)
+			if memberResponse.Error != "" {
+				fmt.Println("Create member error", memberResponse.Error, "retry")
+				time.Sleep(time.Second)
+				continue
+			}
+			memberRef = memberResponse.Result.(string)
+			break
 		}
-		memberRef := memberResponse.Result.(string)
+		if memberRef == "" {
+			check("", fmt.Errorf("couldn't create member after %d retries", createMemberRetry))
+		}
 
 		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
 	}

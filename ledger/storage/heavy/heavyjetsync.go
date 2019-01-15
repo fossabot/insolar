@@ -14,29 +14,16 @@
  *    limitations under the License.
  */
 
-package heavyclient
+package heavy
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
-// HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
-type HeavyErr struct {
-	reply core.Reply
-	err   error
-}
-
-// Error implements error interface.
-func (he HeavyErr) Error() string {
-	return he.err.Error()
-}
-
-// IsRetryable checks retryability of message.
-func (he HeavyErr) IsRetryable() bool {
-	herr, ok := he.reply.(*reply.HeavyError)
-	if !ok {
-		return false
-	}
-	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
+// JetTreeSync is used for sync jets on heavy
+type JetTreeSync interface {
+	SyncTree(ctx context.Context, tree jet.Tree, pulse core.PulseNumber) error
 }

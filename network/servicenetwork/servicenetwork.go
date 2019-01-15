@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -91,10 +90,10 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 // incrementPort increments port number if it not equals 0
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
-	if len(parts) != 2 {
+	if len(parts) < 2 {
 		return address, errors.New("failed to get port from address")
 	}
-	port, err := strconv.Atoi(parts[1])
+	port, err := strconv.Atoi(parts[len(parts)-1])
 	if err != nil {
 		return address, err
 	}
@@ -102,7 +101,9 @@ func incrementPort(address string) (string, error) {
 	if port != 0 {
 		port++
 	}
-	return fmt.Sprintf("%s:%d", parts[0], port), nil
+
+	parts = append(parts[:len(parts)-1], strconv.Itoa(port))
+	return strings.Join(parts, ":"), nil
 }
 
 // Start implements component.Initer
@@ -212,11 +213,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to set pulse"))
-			return
-		}
 
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
@@ -224,24 +220,20 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
+		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to set pulse"))
+			return
+		}
+
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go func(logger core.Logger, network *ServiceNetwork) {
-			if network.NetworkCoordinator == nil {
-				return
-			}
-			if !network.NetworkCoordinator.IsStarted() {
-				return
-			}
-			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
-			if err != nil {
-				logger.Warn("Error writing active nodes to ledger: " + err.Error())
-			}
-			// TODO: make PhaseManager works and uncomment this (after NETD18-75)
-			// err = n.PhaseManager.OnPulse(ctx, &pulse)
-			// if err != nil {
-			// 	logger.Warn("phase manager fail: " + err.Error())
-			// }
-		}(logger, n)
+		// go func(logger core.Logger, network *ServiceNetwork) {
+		// 	TODO: make PhaseManager works and uncomment this (after NETD18-75)
+		// 	err = n.PhaseManager.OnPulse(ctx, &pulse)
+		// 	if err != nil {
+		// 		logger.Warn("phase manager fail: " + err.Error())
+		// 	}
+		// }(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
 	}

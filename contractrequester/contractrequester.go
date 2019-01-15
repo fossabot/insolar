@@ -22,6 +22,9 @@ import (
 	"encoding/binary"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -98,6 +101,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	} else {
 		mode = message.ReturnResult
 	}
+
 	msg := &message.CallMethod{
 		BaseLogicMessage: *baseMessage,
 		ReturnMode:       mode,
@@ -114,7 +118,6 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 
 	if !async {
 		cr.ResultMutex.Lock()
-
 		cr.Sequence++
 		seq = cr.Sequence
 		msg.Sequence = seq
@@ -124,7 +127,13 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		cr.ResultMutex.Unlock()
 	}
 
+	ctx, sendspan := instracer.StartSpan(ctx, "ContractRequester.CallMethod mb.Send")
+	sendspan.AddAttributes(
+		trace.StringAttribute("method", msg.Method),
+	)
 	res, err := mb.Send(ctx, msg, nil)
+	sendspan.End()
+
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -140,6 +149,9 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
+	var result *reply.CallMethod
+	ctx, selectspan := instracer.StartSpan(ctx, "ContractRequester.CallMethod select")
+	defer selectspan.End()
 	select {
 	case ret := <-ch:
 		inslogger.FromContext(ctx).Debug("GOT Method results")
@@ -149,18 +161,19 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		retReply, ok := ret.Reply.(*reply.CallMethod)
 		if !ok {
 			return nil, errors.New("Reply is not CallMethod")
-
 		}
-		return &reply.CallMethod{
+		result = &reply.CallMethod{
 			Request: r.Request,
 			Result:  retReply.Result,
-		}, nil
+		}
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
 		return nil, errors.New("canceled")
 	}
+
+	return result, nil
 }
 
 func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Message, async bool,
@@ -238,6 +251,9 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
 	}
 
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
+	defer span.End()
+
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
@@ -251,5 +267,6 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 
 	c <- msg
 	delete(cr.ResultMap, msg.Sequence)
+
 	return &reply.OK{}, nil
 }

@@ -170,11 +170,11 @@ process_input_params()
 launch_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --log-level=$gorund_log_level &
+    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --log-level=$gorund_log_level --metrics :18182 &
 
     if [ "$NUM_NODES" == "5" ]
     then
-        $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level &
+        $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level --metrics :58183 &
     fi
 }
 
@@ -242,10 +242,10 @@ do
     if [ "$i" -eq "$NUM_NODES" ]
     then
         echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --trace &> $node/output.txt
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --trace &> $node/output.txt &
     echo "NODE $i STARTED in background"
 done
 

@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -40,19 +41,27 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	pulseStorage := storage.NewPulseStorage(db)
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
 
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseStorage = pulseStorage
+	mb.PulseStorage = amPulseStorageMock
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
 	am := NewArtifactManger(db)
+	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 	provider := storage.NewRecentStorageProvider(0)
-	handler := NewMessageHandler(db, &configuration.Ledger{})
+	handler := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 10,
+	})
 	handler.Bus = mb
 	handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider

@@ -38,7 +38,7 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 
 	if err := h.HeavySync.Store(ctx, msg.JetID, msg.PulseNum, msg.Records); err != nil {
 		inslog.Error("Heavy store failed", err)
-		return heavyerrreply(err), err
+		return heavyerrreply(err)
 	}
 	inslog.Debugf("Heavy sync: stores %v records", len(msg.Records))
 	return &reply.OK{}, nil
@@ -61,7 +61,7 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	// start
 	inslog.Debug("Heavy sync: get start message")
 	if err := h.HeavySync.Start(ctx, msg.JetID, msg.PulseNum); err != nil {
-		return heavyerrreply(err), err
+		return heavyerrreply(err)
 	}
 	return &reply.OK{}, nil
 }
@@ -74,14 +74,25 @@ func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.P
 
 	inslog.Debug("Heavy sync: get reset message")
 	if err := h.HeavySync.Reset(ctx, msg.JetID, msg.PulseNum); err != nil {
-		return heavyerrreply(err), err
+		return heavyerrreply(err)
 	}
 	return &reply.OK{}, nil
 }
 
-func heavyerrreply(err error) core.Reply {
-	if herr, ok := err.(*reply.HeavyError); ok {
-		return herr
+func (h *MessageHandler) handleHeavyJetTree(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.HeavyJetTree)
+
+	err := h.HeavyJetTreeSync.SyncTree(ctx, msg.JetTree, msg.PulseNum)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	return &reply.OK{}, nil
+}
+
+func heavyerrreply(err error) (core.Reply, error) {
+	if herr, ok := err.(*reply.HeavyError); ok {
+		return herr, nil
+	}
+	return nil, err
 }
