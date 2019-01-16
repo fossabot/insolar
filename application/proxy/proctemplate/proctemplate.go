@@ -9,7 +9,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111Xa5JLxxqbJcNGoFSwz8YnZ3QuHmrY9KgzWMR6z.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11113DuwUgSQsR8DpTLjqcme3RhZKFcc2pTnUwQ4ZUj.11111111111111111111111111111111")
 
 // ProcTemplate holds proxy type
 type ProcTemplate struct {

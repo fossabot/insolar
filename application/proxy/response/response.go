@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111UJKGHeveHVasjvqDtTq7sPd8c2C4aVVVnURF7W.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112YNp5fJKkGj9SzRpPq9BfNBxSPazCMVhVHPqRoD.11111111111111111111111111111111")
 
 // Response holds proxy type
 type Response struct {
@@ -61,10 +61,12 @@ func GetImplementationFrom(object core.RecordRef) (*Response, error) {
 }
 
 // New is constructor
-func New(name string, signature []byte) *ContractConstructorHolder {
+func New(name string, agreement string, reason string, signature []byte) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = name
-	args[1] = signature
+	args[1] = agreement
+	args[2] = reason
+	args[3] = signature
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)

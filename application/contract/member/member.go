@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/application/proxy/bprocess"
 	"github.com/insolar/insolar/application/proxy/doctype"
+	"github.com/insolar/insolar/application/proxy/document"
 	"github.com/insolar/insolar/application/proxy/organization"
+	"github.com/insolar/insolar/application/proxy/proctemplate"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -123,6 +125,8 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 		return m.createProcTemplate(rootDomain, params)
 	case "createDocumentType":
 		return m.createDocTypeCall(rootDomain, params)
+	case "createDocument":
+		return m.createDocumentCall(rootDomain, params)
 	case "GetNodeRef":
 		return m.getNodeRef(rootDomain, params)
 	}
@@ -312,10 +316,8 @@ func (m *Member) createProcTemplate(ref core.RecordRef, params []byte) (interfac
 
 func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var bProcessReferenceStr string
-	var name string
-	var fields []doctype.Field
-	var attachments []doctype.Attachment
-	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &name, &fields, &attachments); err != nil {
+	var docTypeJson []byte
+	if err := signer.UnmarshalParams(params, &bProcessReferenceStr, &docTypeJson); err != nil {
 		return nil, fmt.Errorf("[ createDocTypeCall ]: %s", err.Error())
 	}
 
@@ -325,7 +327,7 @@ func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface
 	}
 	bProcess := bprocess.GetObject(*bProcessRef)
 
-	doctypeHolder := doctype.New(name, fields, attachments)
+	doctypeHolder := doctype.NewFromJson(docTypeJson)
 
 	dt, err := doctypeHolder.AsChild(bProcess.GetReference())
 	if err != nil {
@@ -333,4 +335,34 @@ func (m *Member) createDocTypeCall(ref core.RecordRef, params []byte) (interface
 	}
 
 	return dt.GetReference().String(), nil
+}
+
+func (m *Member) createDocumentCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	var ProcTemplateReferenceStr string
+	var name string
+	var docTypeReferenceStr string
+	if err := signer.UnmarshalParams(params, &ProcTemplateReferenceStr, &name, &docTypeReferenceStr); err != nil {
+		return nil, fmt.Errorf("[ createDocumentCall ]: %s", err.Error())
+	}
+
+	procTemplateRef, err := core.NewRefFromBase58(ProcTemplateReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ createDocumentCall ] Failed to parse procTemplate reference: %s", err.Error())
+	}
+	procTemplate := proctemplate.GetObject(*procTemplateRef)
+
+	docTypeRef, err := core.NewRefFromBase58(docTypeReferenceStr)
+	if err != nil {
+		return "", fmt.Errorf("[ createDocumentCall ] Failed to parse docTypeRef reference: %s", err.Error())
+	}
+	docType := doctype.GetObject(*docTypeRef)
+
+	documentHolder := document.New(name, *docType)
+
+	d, err := documentHolder.AsChild(procTemplate.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ createDocumentCall ] Can't save as child: %s", err.Error())
+	}
+
+	return d.GetReference().String(), nil
 }

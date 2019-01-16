@@ -1,0 +1,5 @@
+{
+  "Name": "Statement",
+  "Fields": [{"Name" :  "Сумма:", "Type":  "IntType", "Value":  ""}],
+  "Attachments": [{"Name" :  "Паспорт:", "Type":  "PDF", "Value":  ""}]
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
+type FieldType string
 type AttachmentType string
 type Field struct {
 	Name  string
@@ -17,11 +18,10 @@ type Attachment struct {
 	Type  FieldType
 	Value []byte
 }
-type FieldType string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112mCiX8arNapHRj3DtLVKQEU8GMyR4ddkCs7Lntz.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11113KzdxLnQGgSLr476EDf3TkHUQFThFro2xQ6NKsF.11111111111111111111111111111111")
 
 // DocType holds proxy type
 type DocType struct {
@@ -87,6 +87,20 @@ func New(name string, fields []Field, attachments []Attachment) *ContractConstru
 	}
 
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
+}
+
+// NewFromJson is constructor
+func NewFromJson(docTypeJson []byte) *ContractConstructorHolder {
+	var args [1]interface{}
+	args[0] = docTypeJson
+
+	var argsSerialized []byte
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	return &ContractConstructorHolder{constructorName: "NewFromJson", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

@@ -56,3 +56,14 @@ func New(name string, fields []Field, attachments []Attachment) (*DocType, error
 		Attachments: attachments,
 	}, nil
 }
+
+func NewFromJson(docTypeJson []byte) (*DocType, error) {
+	docType := &DocType{}
+
+	err := json.Unmarshal(docTypeJson, docType)
+	if err != nil {
+		return nil, fmt.Errorf("[ NewFromJson ]: %s", err.Error())
+	}
+
+	return docType, nil
+}
