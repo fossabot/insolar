@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111JTredrhXH9FrvbtYsgSJcakbZ6Co3a76ZUNgXC.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("111126oos3GoDLqGFjpmbCMEGzbFB3wTkEPKzaCtq4h.11111111111111111111111111111111")
 
 // BProcess holds proxy type
 type BProcess struct {

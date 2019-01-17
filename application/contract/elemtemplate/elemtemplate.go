@@ -6,17 +6,32 @@ import (
 
 type ElemTemplate struct {
 	foundation.BaseContract
-	Name                       string
-	PreviousElements           []ElemTemplate
-	NextElementTemplateSuccess []ElemTemplate
-	NextElementTemplateFail    []ElemTemplate
+	Name                        string
+	PreviousElemTemplateRefs    []string
+	NextElemTemplateSuccessRefs []string
+	NextElemTemplateFailRefs    []string
 }
 
-func New(name string, previousElements []ElemTemplate, nextElementTemplateSuccess []ElemTemplate, nextElementTemplateFail []ElemTemplate) (*ElemTemplate, error) {
+func New(name string, previousElements []string, nextElementTemplateSuccess []string, nextElementTemplateFail []string) (*ElemTemplate, error) {
 	return &ElemTemplate{
-		Name:                       name,
-		PreviousElements:           previousElements,
-		NextElementTemplateSuccess: nextElementTemplateSuccess,
-		NextElementTemplateFail:    nextElementTemplateFail,
+		Name:                        name,
+		PreviousElemTemplateRefs:    previousElements,
+		NextElemTemplateSuccessRefs: nextElementTemplateSuccess,
+		NextElemTemplateFailRefs:    nextElementTemplateFail,
 	}, nil
+}
+
+func (elemTemplate *ElemTemplate) SetPreviousElemTemplateRef(previousElemTemplateRef string) error {
+	elemTemplate.PreviousElemTemplateRefs = append(elemTemplate.PreviousElemTemplateRefs, previousElemTemplateRef)
+	return nil
+}
+
+func (elemTemplate *ElemTemplate) SetNextElemTemplateSuccessRef(nextElemTemplateSuccessRef string) error {
+	elemTemplate.NextElemTemplateSuccessRefs = append(elemTemplate.NextElemTemplateSuccessRefs, nextElemTemplateSuccessRef)
+	return nil
+}
+
+func (elemTemplate *ElemTemplate) SetNextElemTemplateFailRef(nextElemTemplateFailRef string) error {
+	elemTemplate.NextElemTemplateFailRefs = append(elemTemplate.NextElemTemplateFailRefs, nextElemTemplateFailRef)
+	return nil
 }

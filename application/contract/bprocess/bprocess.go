@@ -5,6 +5,7 @@ import (
 	"fmt"
 	procTemplateContract "github.com/insolar/insolar/application/contract/proctemplate"
 	"github.com/insolar/insolar/application/proxy/doctype"
+	"github.com/insolar/insolar/application/proxy/elemtemplate"
 	procTemplateProxy "github.com/insolar/insolar/application/proxy/proctemplate"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -125,14 +126,39 @@ func (bProcess *BProcess) GetDocTypes() (resultJSON []byte, err error) {
 	return resultJSON, nil
 }
 
-// CreateBProcess processes create business process request
+// СreateProcTemplate processes create process template request
 func (bProcess *BProcess) СreateProcTemplate(name string) (string, error) {
 
+	// create proc template
 	procTemplateHolder := procTemplateProxy.New(name)
-
 	pt, err := procTemplateHolder.AsChild(bProcess.GetReference())
 	if err != nil {
-		return "", fmt.Errorf("[ CreateDocType ] Can't save as child: %s", err.Error())
+		return "", fmt.Errorf("[ СreateProcTemplate ] Can't save Process Template as child: %s", err.Error())
+	}
+
+	// create start elem template
+	startElemTemplateHolder := elemtemplate.New("Start", []string{}, []string{}, []string{})
+	startET, err := startElemTemplateHolder.AsChild(pt.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ СreateProcTemplate ] Can't save start Element Template as child: %s", err.Error())
+	}
+	startETRef := startET.GetReference()
+	startETObject := *elemtemplate.GetObject(startETRef)
+
+	// create last elem template
+	lastElemTemplateHolder := elemtemplate.New("Last", []string{startETRef.String()}, []string{}, []string{})
+	lastET, err := lastElemTemplateHolder.AsChild(pt.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ СreateProcTemplate ] Can't save last Element Template as child: %s", err.Error())
+	}
+	lastETRef := lastET.GetReference()
+
+	// set elements for process
+	if err = startETObject.SetNextElemTemplateSuccessRef(lastETRef.String()); err != nil {
+		return "", fmt.Errorf("[ СreateProcTemplate ] Can't Set Next Success Element Template for start element template: %s", err.Error())
+	}
+	if err = pt.SetElements(startETRef.String(), lastETRef.String()); err != nil {
+		return "", fmt.Errorf("[ СreateProcTemplate ] Can't Set Elements for process template: %s", err.Error())
 	}
 
 	return pt.GetReference().String(), nil

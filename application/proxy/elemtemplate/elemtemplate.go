@@ -8,7 +8,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112q1xKWzeJLVuzc2kcrijHt2DL9mChAP2iMSBcje.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111xy2cUeFVFqkqRjSuYeZEvgVy47f7kDMAcW4usF.11111111111111111111111111111111")
 
 // ElemTemplate holds proxy type
 type ElemTemplate struct {
@@ -61,7 +61,7 @@ func GetImplementationFrom(object core.RecordRef) (*ElemTemplate, error) {
 }
 
 // New is constructor
-func New(name string, previousElements []ElemTemplate, nextElementTemplateSuccess []ElemTemplate, nextElementTemplateFail []ElemTemplate) *ContractConstructorHolder {
+func New(name string, previousElements []string, nextElementTemplateSuccess []string, nextElementTemplateFail []string) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = name
 	args[1] = previousElements
@@ -139,4 +139,160 @@ func (r *ElemTemplate) GetCode() (core.RecordRef, error) {
 	}
 
 	return r.Code, nil
+}
+
+// SetPreviousElemTemplateRef is proxy generated method
+func (r *ElemTemplate) SetPreviousElemTemplateRef(previousElemTemplateRef string) error {
+	var args [1]interface{}
+	args[0] = previousElemTemplateRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "SetPreviousElemTemplateRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// SetPreviousElemTemplateRefNoWait is proxy generated method
+func (r *ElemTemplate) SetPreviousElemTemplateRefNoWait(previousElemTemplateRef string) error {
+	var args [1]interface{}
+	args[0] = previousElemTemplateRef
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "SetPreviousElemTemplateRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetNextElemTemplateSuccessRef is proxy generated method
+func (r *ElemTemplate) SetNextElemTemplateSuccessRef(nextElemTemplateSuccessRef string) error {
+	var args [1]interface{}
+	args[0] = nextElemTemplateSuccessRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "SetNextElemTemplateSuccessRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// SetNextElemTemplateSuccessRefNoWait is proxy generated method
+func (r *ElemTemplate) SetNextElemTemplateSuccessRefNoWait(nextElemTemplateSuccessRef string) error {
+	var args [1]interface{}
+	args[0] = nextElemTemplateSuccessRef
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "SetNextElemTemplateSuccessRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetNextElemTemplateFailRef is proxy generated method
+func (r *ElemTemplate) SetNextElemTemplateFailRef(nextElemTemplateFailRef string) error {
+	var args [1]interface{}
+	args[0] = nextElemTemplateFailRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "SetNextElemTemplateFailRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// SetNextElemTemplateFailRefNoWait is proxy generated method
+func (r *ElemTemplate) SetNextElemTemplateFailRefNoWait(nextElemTemplateFailRef string) error {
+	var args [1]interface{}
+	args[0] = nextElemTemplateFailRef
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "SetNextElemTemplateFailRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -366,3 +366,41 @@ func (m *Member) createDocumentCall(ref core.RecordRef, params []byte) (interfac
 
 	return d.GetReference().String(), nil
 }
+
+//func (m *Member) createElementTemplateCall(ref core.RecordRef, params []byte) (interface{}, error) {
+//	var ProcTemplateReferenceStr string
+//	var name string
+//	var previousElemTemplatesSuccessRefStrs []string
+//	var previousElemTemplatesFailRefStrs []string
+//	var nextElementTemplateSuccessRefs []string
+//	var nextElementTemplateFailRefs []string
+//	if err := signer.UnmarshalParams(params, &ProcTemplateReferenceStr,
+//		&name,
+//		&previousElemTemplatesSuccessRefStrs,
+//		&previousElemTemplatesFailRefStrs,
+//		&nextElementTemplateSuccessRefs,
+//		&nextElementTemplateFailRefs); err != nil {
+//		return nil, fmt.Errorf("[ createDocumentCall ]: %s", err.Error())
+//	}
+//
+//	procTemplateRef, err := core.NewRefFromBase58(ProcTemplateReferenceStr)
+//	if err != nil {
+//		return "", fmt.Errorf("[ createDocumentCall ] Failed to parse procTemplate reference: %s", err.Error())
+//	}
+//	procTemplate := proctemplate.GetObject(*procTemplateRef)
+//
+//	docTypeRef, err := core.NewRefFromBase58(docTypeReferenceStr)
+//	if err != nil {
+//		return "", fmt.Errorf("[ createDocumentCall ] Failed to parse docTypeRef reference: %s", err.Error())
+//	}
+//	docType := doctype.GetObject(*docTypeRef)
+//
+//	documentHolder := document.New(name, *docType)
+//
+//	d, err := documentHolder.AsChild(procTemplate.GetReference())
+//	if err != nil {
+//		return "", fmt.Errorf("[ createDocumentCall ] Can't save as child: %s", err.Error())
+//	}
+//
+//	return d.GetReference().String(), nil
+//}

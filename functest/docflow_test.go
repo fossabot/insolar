@@ -155,6 +155,4 @@ func TestGetParticipants(t *testing.T) {
 	// Create Document for Process Template
 	createDocument(t, procTemplateRef, "Заявление №1", docTypeRef)
 
-	// Create Document for Process Template
-	createDocument(t, procTemplateRef, "Заявление №1", docTypeRef)
 }
