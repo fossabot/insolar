@@ -3,6 +3,7 @@
 Enterprise-ready blockchain platform
 
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FAndreyBronin%2Finsolar.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FAndreyBronin%2Finsolar?ref=badge_shield)
 
 [![Build Status](https://travis-ci.org/insolar/insolar.svg?branch=master)](https://travis-ci.org/insolar/insolar)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar)](https://goreportcard.com/report/github.com/insolar/insolar)
@@ -91,3 +92,6 @@ See [Contributing Guidelines](.github/CONTRIBUTING.md).
 ## License
 
 This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network), [NetworkCoordinator](networkcoordinator) and [Consensus](consensus)  subdirectories, which are licensed under the terms of the [BSD 3-Clause Clear License](network/LICENSE.md).
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FAndreyBronin%2Finsolar.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FAndreyBronin%2Finsolar?ref=badge_large)
